@@ -24,18 +24,10 @@ jobs:
         working-directory: dashboard
         run: npm ci
 
-      - name: Debug GIST_IDS
-        run: |
-          echo "GIST_IDS from vars:"
-          echo '${{ vars.GIST_IDS }}' | sed 's/./&/g'
-          echo ""
-          echo "GIST_IDS from secrets:"
-          echo '${{ secrets.GIST_IDS }}' | sed 's/./&/g'
-
       - name: Build
         working-directory: dashboard
         env:
-          VITE_GIST_IDS: ${{ vars.GIST_IDS || secrets.GIST_IDS }}
+          VITE_GIST_IDS: ${{ secrets.GIST_IDS }}
         run: npm run build -- --base=/wakatime-hub/dashboard/
 
       - name: Deploy to GitHub Pages
@@ -44,4 +36,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dashboard/dist
           destination_dir: dashboard
+          force_orphan: true
           keep_files: false
