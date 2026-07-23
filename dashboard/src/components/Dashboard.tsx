@@ -17,7 +17,7 @@ import {
   transformToStackedChart,
   transformToTrend,
   transformToPie,
-  getLatestSummary,
+  getAggregatedSummary,
 } from '@/services/DataAggregator';
 import {
   extractAICodeComparison,
@@ -84,8 +84,8 @@ export function Dashboard() {
     [filteredSummaries]
   );
 
-  const latestSummary = useMemo(
-    () => getLatestSummary(filteredSummaries),
+  const overviewStats = useMemo(
+    () => getAggregatedSummary(filteredSummaries),
     [filteredSummaries]
   );
 
@@ -134,7 +134,12 @@ export function Dashboard() {
       </header>
 
       <div className={styles.content}>
-        <OverviewCards latestSummary={latestSummary} />
+        <OverviewCards
+          totalSeconds={overviewStats.totalSeconds}
+          projectCount={overviewStats.projectCount}
+          languageCount={overviewStats.languageCount}
+          editorCount={overviewStats.editorCount}
+        />
 
         <Controls
           dateRange={dateRange}

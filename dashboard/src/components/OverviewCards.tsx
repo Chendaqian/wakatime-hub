@@ -1,32 +1,34 @@
-import type { DailySummary } from '@/types';
 import { secondsToReadable } from '@/services/format';
 import styles from './OverviewCards.module.css';
 
 interface OverviewCardsProps {
-  latestSummary: DailySummary | undefined;
+  totalSeconds: number;
+  projectCount: number;
+  languageCount: number;
+  editorCount: number;
 }
 
-export function OverviewCards({ latestSummary }: OverviewCardsProps) {
-  if (!latestSummary) {
+export function OverviewCards({ totalSeconds, projectCount, languageCount, editorCount }: OverviewCardsProps) {
+  if (totalSeconds === 0 && projectCount === 0) {
     return null;
   }
 
   const cards = [
     {
-      label: '🤖 总编码时长',
-      value: secondsToReadable(latestSummary.grand_total.total_seconds),
+      label: '总编码时长',
+      value: secondsToReadable(totalSeconds),
     },
     {
-      label: '📁 项目数',
-      value: latestSummary.projects.length.toString(),
+      label: '项目数',
+      value: projectCount.toString(),
     },
     {
-      label: '🔤 语言数',
-      value: latestSummary.languages.length.toString(),
+      label: '语言数',
+      value: languageCount.toString(),
     },
     {
-      label: '💻 编辑器数',
-      value: latestSummary.editors.length.toString(),
+      label: '编辑器数',
+      value: editorCount.toString(),
     },
   ];
 

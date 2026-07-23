@@ -142,11 +142,35 @@ export function generateDateRange(startDate: string, endDate: string): string[] 
 }
 
 /**
- * 获取指定日期范围的最新一天数据（用于概览卡片）
+ * 聚合日期范围内的汇总统计（用于概览卡片）
+ * 总时长累加，项目/语言/编辑器去重计数
  */
-export function getLatestSummary(
-  summaries: DailySummary[]
-): DailySummary | undefined {
-  if (summaries.length === 0) return undefined;
-  return summaries[summaries.length - 1];
+export function getAggregatedSummary(summaries: DailySummary[]): {
+  totalSeconds: number;
+  projectCount: number;
+  languageCount: number;
+  editorCount: number;
+} {
+  if (summaries.length === 0) {
+    return { totalSeconds: 0, projectCount: 0, languageCount: 0, editorCount: 0 };
+  }
+
+  const projectSet = new Set<string>();
+  const languageSet = new Set<string>();
+  const editorSet = new Set<string>();
+  let totalSeconds = 0;
+
+  for (const s of summaries) {
+    totalSeconds += s.grand_total.total_seconds;
+    for (const p of s.projects) projectSet.add(p.name);
+    for (const l of s.languages) languageSet.add(l.name);
+    for (const e of s.editors) editorSet.add(e.name);
+  }
+
+  return {
+    totalSeconds,
+    projectCount: projectSet.size,
+    languageCount: languageSet.size,
+    editorCount: editorSet.size,
+  };
 }
