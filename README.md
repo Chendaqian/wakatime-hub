@@ -1,6 +1,6 @@
 <p align="center">
   <h3 align="center">WakaTime Hub</h3>
-  <p align="center">📊 Sync WakaTime data to Gist & visualize with a modern dashboard</p>
+  <p align="center">📊 Sync WakaTime data to Gist & visualize with charts</p>
 </p>
 
 ---
@@ -11,73 +11,133 @@
 
 | Module | Description |
 |--------|-------------|
-| `sync/` | GitHub Action: daily sync WakaTime summary to Gist |
-| `dashboard/` | React SPA: dashboard that reads Gist data and renders charts |
+| `sync/` | GitHub Action: daily sync WakaTime summary to Gist, supports yearly Gist split |
+| `dashboard/` | React SPA (Vite + ECharts): read Gist data and render 7 chart types |
+
+Live demo: `https://chendaqian.github.io/wakatime-hub/dashboard`
+
+## Architecture
+
+```
+wakatime-hub/
+├── sync/                  # Sync module (Node.js Action)
+│   ├── index.js           # Main script
+│   ├── action.yml         # Action definition
+│   └── dist/              # ncc build output
+├── dashboard/             # Dashboard module (React 19 + Vite)
+│   ├── src/
+│   │   ├── components/    # ChartComponents, Dashboard, ConfigPage, Controls, DatePicker, OverviewCards
+│   │   ├── hooks/         # GistDataContext, useGistData
+│   │   ├── services/      # GistService, DataAggregator, AIMetricsTransformer, format
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── styles/        # CSS Modules
+│   ├── vite.config.ts     # base: /wakatime-hub/dashboard/, port 3900
+│   └── package.json
+├── .github/workflows/
+│   ├── schedule.yml       # Sync cron: UTC 13:00 (Beijing 21:00) daily
+│   └── deploy-pages.yml   # Dashboard auto-build & deploy to GitHub Pages
+├── README.md
+├── README_CN.md
+└── CLAUDE.md
+```
 
 ## Quick Start
 
 ### 1. Sync Module — Auto backup WakaTime to Gist
 
-**Prep work:**
+**Prerequisites:**
 
-1. Create a new public GitHub Gist (https://gist.github.com/)
+1. Create a public GitHub Gist (https://gist.github.com/)
 2. Create a GitHub token with the `gist` scope (https://github.com/settings/tokens/new)
-3. Sign up for WakaTime and copy your API Key (https://wakatime.com/settings/account)
+3. Register WakaTime and copy your API Key (https://wakatime.com/settings/account)
 
 **Setup:**
 
 1. Fork this repo
-2. Go to repo **Settings → Secrets and variables → Actions**
-3. Add these **Secrets**:
+2. Go to **Settings → Secrets and variables → Actions → Secrets**
+3. Add the following **Secrets**:
 
-| Secret | Description |
-|--------|-------------|
-| `GH_TOKEN` | GitHub token with `gist` scope |
-| `WAKATIME_API_KEY` | Your WakaTime API Key |
-| `GIST_IDS` | Gist ID(s), separated by `;`. Uses first one as write target. Support yearly split: `GIST_ID_2026`, `GIST_ID_2027`... |
-| `SCU_KEY` | (Optional) ServerChan key for WeChat push |
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `GH_TOKEN` | ✅ | GitHub token with `gist` scope |
+| `WAKATIME_API_KEY` | ✅ | Your WakaTime API Key |
+| `GIST_IDS` | ✅ | Gist ID(s), separated by `;`. First one is the write target. |
+| `GIST_ID_YYYY` | No | Year-specific Gist (e.g., `GIST_ID_2026`). Takes priority over `GIST_IDS`. |
+| `SCU_KEY` | No | ServerChan key for WeChat push (https://sct.ftqq.com/) |
 
-4. Run workflow manually (forked repos won't auto-run)
+> **Gist ID priority**: `GIST_ID_2026` (current year) → `GIST_IDS` first ID → `GIST_ID` (legacy)
 
-> **Multi-Gist (by year):** Set `GIST_ID_2026` in Secrets for 2026 data. The sync script auto-picks the current year's Gist. Falls back to first ID in `GIST_IDS`.
+4. Run the **"Update gist with WakaTime summary"** workflow manually once.
 
-**WeChat Daily Report:**
-
-Use [ServerChan](https://sct.ftqq.com/) to push daily reports to WeChat. Set `SCU_KEY` Secret.
-
-<p align="center">
-  <img width="400" src="./screenshot/daily-report.jpg">
-</p>
+**Why split by year?** Gist truncates at **300 files**. With ~365 days per year, single Gist will exceed the limit. Use `GIST_ID_2026`, `GIST_ID_2027` etc. to route each year's data to a different Gist.
 
 ### 2. Dashboard Module — Visualize your data
 
-**Live demo:** `https://chendaqian.github.io/wakatime-hub/dashboard`
+**Prerequisites:**
 
-Deploy your own:
+- Sync module already running (Gist has `summaries_*.json` files)
+- Gist is **public** (or supply a GitHub Token on the config page)
 
-1. Go to repo **Settings → Secrets and variables → Actions → Variables**
-2. Add repository variable:
+**Deploy:**
 
-| Variable | Value |
-|----------|-------|
-| `GIST_IDS` | Your Gist ID(s), separated by `;` or `,` |
+1. Go to **Settings → Secrets and variables → Actions → Secrets**
+2. Add Secret (or Variable) — the workflow reads both:
 
-3. Push to `master` — GitHub Action auto-deploys to GitHub Pages
-4. Enable Pages at **Settings → Pages**: source = `gh-pages` branch, `/ (root)`
+| Name | Value | Type |
+|------|-------|------|
+| `GIST_IDS` | `your-gist-id;another-gist-id` | **Secrets** or **Variables** |
+
+3. Go to **Settings → Pages**:
+   - Source: `Deploy from a branch`
+   - Branch: `gh-pages`, `/ (root)` → **Save**
+
+4. Push to `master` → GitHub Action auto-deploys. Or manually run **"Deploy Dashboard to GitHub Pages"**.
+
 5. Visit `https://<username>.github.io/wakatime-hub/dashboard`
 
-**Charts included:** Stacked column · Trend line · Donut pie · Calendar heatmap · AI vs Human code · Token trends · Agent cost analysis
+> **Important**: Changing `GIST_IDS` requires re-running the deploy workflow. The value is injected at build time into the JS bundle.
+
+**Charts included:**
+Stacked column · Trend line · Donut pie · Calendar heatmap · AI vs Human code · Token trends · Agent cost analysis
 
 **Local dev:**
 ```bash
 cd dashboard
 npm install
-npm run dev        # http://localhost:3900/wakatime-hub/dashboard/
+
+# On Windows (PowerShell):
+$env:VITE_GIST_IDS="your-gist-id"
+npm run dev
+
+# On macOS / Linux:
+VITE_GIST_IDS="your-gist-id" npm run dev
+
+# → http://localhost:3900/wakatime-hub/dashboard/
 ```
+
+## Environment Variables Reference
+
+### sync/ — GitHub Secrets
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `GH_TOKEN` | ✅ | GitHub token with `gist` scope |
+| `WAKATIME_API_KEY` | ✅ | WakaTime API Key |
+| `GIST_IDS` | ✅ | Gist IDs, `;` separated. First = write target |
+| `GIST_ID_YYYY` | No | Year-specific Gist. Priority over `GIST_IDS` |
+| `SCU_KEY` | No | ServerChan key for WeChat push |
+
+### dashboard/ — GitHub Secrets or Variables
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `GIST_IDS` | ✅ | Default Gist IDs (built into JS). Users can override on config page |
 
 ## Warning
 
-Gist files list truncates at **300 files**. For long-running data, split by year (use `GIST_ID_YYYY`).
+- Gist files list truncates at **300 files**. Split by year (`GIST_ID_YYYY`) for long-running data.
+- `GIST_IDS` for the dashboard is embedded at build time. Re-deploy after changes.
+- The dashboard reads Gist data client-side via the public GitHub API. Without a Token, unauthenticated rate limit is 60 req/h.
 
 [Gist Truncation](https://docs.github.com/en/rest/gists/gists?apiVersion=2022-11-28#truncation)
 
