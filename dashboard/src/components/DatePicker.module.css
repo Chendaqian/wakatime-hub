@@ -1,0 +1,174 @@
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger {
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #27272a;
+  background: #18181b;
+  color: #a1a1aa;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: #3f3f46;
+    color: #d4d4d8;
+  }
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  padding: 0.75rem;
+  box-shadow:
+    0 0 0 1px rgba(9, 9, 11, 0.3),
+    0 12px 40px rgba(0, 0, 0, 0.5);
+  min-width: 260px;
+}
+
+/* ===== Navigation ===== */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.navBtn {
+  background: none;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  color: #71717a;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  transition: all 0.15s;
+
+  &:hover {
+    color: #d4d4d8;
+    border-color: #3f3f46;
+  }
+}
+
+.navTitle {
+  color: #a1a1aa;
+  font-size: 0.813rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  gap: 0.25rem;
+  cursor: default;
+
+  span {
+    cursor: pointer;
+    padding: 0.125rem 0.25rem;
+    border-radius: 4px;
+    transition: all 0.15s;
+
+    &:hover {
+      background: #27272a;
+      color: #fafafa;
+    }
+  }
+}
+
+/* ===== Year input ===== */
+.yearEditor {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.yearInput {
+  width: 52px;
+  padding: 0.125rem 0.25rem;
+  border: 1px solid #3f3f46;
+  border-radius: 5px;
+  background: #09090b;
+  color: #d4d4d8;
+  font-size: 0.813rem;
+  text-align: center;
+  outline: none;
+  font-weight: 500;
+
+  &:focus {
+    border-color: #6366f1;
+  }
+
+  /* hide spin buttons */
+  -moz-appearance: textfield;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+/* ===== Weekday headers ===== */
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.weekDay {
+  color: #52525b;
+  font-size: 0.688rem;
+  font-weight: 500;
+  padding: 0.25rem 0;
+}
+
+/* ===== Day grid ===== */
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dayBtn {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #d4d4d8;
+  font-size: 0.813rem;
+  font-weight: 450;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.1s;
+
+  &:hover {
+    background: #27272a;
+  }
+}
+
+.dayEmpty {
+  aspect-ratio: 1;
+}
+
+.daySelected {
+  background: #6366f1 !important;
+  color: #fff;
+  font-weight: 600;
+}
+
+.dayToday {
+  box-shadow: inset 0 0 0 1.5px #6366f1;
+}

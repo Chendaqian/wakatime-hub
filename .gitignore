@@ -15,6 +15,8 @@ yarn-error.log*
 /node_modules
 /jspm_packages
 /bower_components
+sync/node_modules
+sync/dist
 
 # Yarn Integrity file
 .yarn-integrity

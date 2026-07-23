@@ -1,10 +1,21 @@
 require('dotenv').config()
 const { WakaTimeClient, RANGE } = require('wakatime-client')
 const dayjs = require('dayjs')
+const utc = require('dayjs/plugin/utc')
+dayjs.extend(utc)
 const { Octokit } = require('@octokit/rest')
 const Axios = require('axios')
 
-const { WAKATIME_API_KEY, GH_TOKEN, GIST_ID, SCU_KEY } = process.env
+const { WAKATIME_API_KEY, GH_TOKEN, SCU_KEY } = process.env
+// 按年份取对应的 Gist ID（Secrets 里配 GIST_ID_2026、GIST_ID_2027 ...）
+// 如果没配，取 GIST_IDS（空格/逗号/分号分隔），取第一个为当前写入目标
+const currentYear = new Date().getFullYear()
+const GIST_ID =
+  process.env[`GIST_ID_${currentYear}`] ||
+  (process.env.GIST_IDS
+    ? process.env.GIST_IDS.split(/[\s,;]+/).filter(Boolean)[0]
+    : null) ||
+  process.env.GIST_ID // 旧版兼容
 const BASE_URL = 'https://wakatime.com/api/v1'
 const summariesApi = `${BASE_URL}/users/current/summaries`
 const scuPushApi = `https://sctapi.ftqq.com`
@@ -84,20 +95,20 @@ async function sendMessageToWechat(text, desp) {
 }
 
 const fetchSummaryWithRetry = async times => {
-  const yesterday = dayjs()
-    .subtract(1, 'day')
+  const date = dayjs()
+    .utcOffset(8)
     .format('YYYY-MM-DD')
   try {
-    const mySummary = await getMySummary(yesterday)
-    await updateGist(yesterday, mySummary.data)
+    const mySummary = await getMySummary(date)
+    await updateGist(date, mySummary.data)
     await sendMessageToWechat(
-      `${yesterday} update successfully!`,
-      getMessageContent(yesterday, mySummary.data)
+      `${date} update successfully!`,
+      getMessageContent(date, mySummary.data)
     )
   } catch (error) {
     if (times === 1) {
       console.error(`Unable to fetch wakatime summary\n ${error} `)
-      return await sendMessageToWechat(`[${yesterday}]failed to update wakatime data!`)
+      return await sendMessageToWechat(`[${date}]failed to update wakatime data!`)
     }
     console.log(`retry fetch summary data: ${times - 1} time`)
     fetchSummaryWithRetry(times - 1)

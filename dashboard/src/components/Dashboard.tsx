@@ -1,0 +1,198 @@
+import { useState, useMemo, useCallback } from 'react';
+import dayjs from 'dayjs';
+import { OverviewCards } from './OverviewCards';
+import {
+  StackedColumnChart,
+  TrendLineChart,
+  PieChart,
+  ActivityHeatmap,
+  AICodeComparison,
+  AITokenTrend,
+  AIAgentCost,
+} from './ChartComponents';
+import { Controls } from './Controls';
+import { useGistData } from '@/hooks/GistDataContext';
+import {
+  filterByDateRange,
+  transformToStackedChart,
+  transformToTrend,
+  transformToPie,
+  getLatestSummary,
+} from '@/services/DataAggregator';
+import {
+  extractAICodeComparison,
+  extractAITokenTrend,
+  extractAIAgentCost,
+} from '@/services/AIMetricsTransformer';
+import type { DimensionType } from '@/types';
+import styles from './Dashboard.module.css';
+
+export function Dashboard() {
+  const { summaries, status, error, gistIds, loadData, resetConfig } = useGistData();
+
+  const today = dayjs().format('YYYY-MM-DD');
+  const [dateRange, setDateRange] = useState({
+    start: dayjs().subtract(6, 'day').format('YYYY-MM-DD'),
+    end: today,
+  });
+  const [dimension, setDimension] = useState<DimensionType>('projects');
+
+  // 按日期范围筛选
+  const filteredSummaries = useMemo(
+    () => filterByDateRange(summaries, dateRange.start, dateRange.end),
+    [summaries, dateRange]
+  );
+
+  // 各图表数据
+  const stackedData = useMemo(
+    () => transformToStackedChart(filteredSummaries, dimension),
+    [filteredSummaries, dimension]
+  );
+
+  const trendData = useMemo(
+    () => transformToTrend(filteredSummaries),
+    [filteredSummaries]
+  );
+
+  const pieData = useMemo(
+    () => transformToPie(filteredSummaries, dimension),
+    [filteredSummaries, dimension]
+  );
+
+  const heatmapData = useMemo(
+    () =>
+      filteredSummaries.map((s) => ({
+        date: s.date,
+        total_seconds: s.grand_total.total_seconds,
+      })),
+    [filteredSummaries]
+  );
+
+  // AI 指标数据
+  const aiCodeData = useMemo(
+    () => extractAICodeComparison(filteredSummaries),
+    [filteredSummaries]
+  );
+
+  const aiTokenData = useMemo(
+    () => extractAITokenTrend(filteredSummaries),
+    [filteredSummaries]
+  );
+
+  const aiAgentCostData = useMemo(
+    () => extractAIAgentCost(filteredSummaries),
+    [filteredSummaries]
+  );
+
+  const latestSummary = useMemo(
+    () => getLatestSummary(filteredSummaries),
+    [filteredSummaries]
+  );
+
+  const isLoading = status === 'loading';
+
+  const handleReset = useCallback(() => {
+    resetConfig();
+  }, [resetConfig]);
+
+  // 错误状态
+  if (status === 'error') {
+    return (
+      <div className={styles.dashboardContainer}>
+        <div className={styles.errorBox}>
+          <h2>⚠️ 数据加载失败</h2>
+          <p>{error || '未知错误'}</p>
+          <button className={styles.retryBtn} onClick={loadData}>
+            重试
+          </button>
+          <button className={styles.configLinkBtn} onClick={handleReset}>
+            修改 Gist ID
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const dimensionLabel =
+    dimension === 'projects'
+      ? '项目'
+      : dimension === 'languages'
+        ? '语言'
+        : dimension === 'editors'
+          ? '编辑器'
+          : dimension === 'categories'
+            ? '类别'
+            : '系统';
+
+  return (
+    <div className={styles.dashboardContainer}>
+      <header className={styles.header}>
+        <h1>WakaTime Hub</h1>
+        <span className={styles.gistBadge}>
+          {gistIds.length} 个数据源
+        </span>
+      </header>
+
+      <div className={styles.content}>
+        <OverviewCards latestSummary={latestSummary} />
+
+        <Controls
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          dimension={dimension}
+          onDimensionChange={setDimension}
+          onReset={handleReset}
+        />
+
+        <div className={styles.chartGrid}>
+          <StackedColumnChart
+            data={stackedData}
+            title={`每日编码分布 - ${dimensionLabel}`}
+            loading={isLoading}
+          />
+          <TrendLineChart
+            data={trendData}
+            title="总编码时长趋势"
+            loading={isLoading}
+          />
+          <PieChart
+            data={pieData}
+            title={`${dimensionLabel} 占比分布`}
+            loading={isLoading}
+          />
+          <ActivityHeatmap
+            summaries={heatmapData}
+            title="每日活动热力图"
+            loading={isLoading}
+          />
+        </div>
+
+        <div className={styles.aiSection}>
+          <div className={styles.aiSectionTitle}>🤖 AI 编程指标</div>
+          <div className={styles.aiGrid}>
+            <AICodeComparison
+              data={aiCodeData}
+              title="AI vs 人工 代码新增行数对比"
+              loading={isLoading}
+            />
+            <AITokenTrend
+              data={aiTokenData}
+              title="AI Token 消耗趋势（输入/输出）"
+              loading={isLoading}
+            />
+            <div className={styles.chartFull}>
+              <AIAgentCost
+                data={aiAgentCostData}
+                title="AI Agent 成本分析（美元）"
+                loading={isLoading}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+  // 骨架屏 + 响应式已在 ChartComponents ChartCard 和 Dashboard.module.css 中实现
+  // 错误状态已在上方 status === 'error' 分支中处理

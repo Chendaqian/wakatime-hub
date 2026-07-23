@@ -1,0 +1,51 @@
+.overviewCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  position: relative;
+  background: #18181b;
+  border: 1px solid rgba(39, 39, 42, 0.8);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.08);
+  }
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #71717a;
+  margin-bottom: 0.375rem;
+}
+
+.value {
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fafafa;
+  line-height: 1.1;
+}
+
+.subValue {
+  font-size: 0.75rem;
+  color: #71717a;
+  margin-top: 0.125rem;
+}

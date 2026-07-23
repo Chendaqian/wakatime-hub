@@ -1,65 +1,86 @@
 <p align="center">
-  <h3 align="center">wakatime-sync</h3>
-  <p align="center">Update Wakatime summary data to your gist every day</p>
+  <h3 align="center">WakaTime Hub</h3>
+  <p align="center">📊 Sync WakaTime data to Gist & visualize with a modern dashboard</p>
 </p>
 
 ---
 
-> If you only need notify wakatime daily report, you can check out [wakatime-notify](https://github.com/superman66/wakatime-notify)
+[中文版](README_CN.md)
 
-## Setup
+## What's inside
 
-### Prep work
+| Module | Description |
+|--------|-------------|
+| `sync/` | GitHub Action: daily sync WakaTime summary to Gist |
+| `dashboard/` | React SPA: dashboard that reads Gist data and renders charts |
+
+## Quick Start
+
+### 1. Sync Module — Auto backup WakaTime to Gist
+
+**Prep work:**
 
 1. Create a new public GitHub Gist (https://gist.github.com/)
-1. Create a token with the `gist` scope and copy it. (https://github.com/settings/tokens/new)
-1. Create a WakaTime account (https://wakatime.com/signup)
-1. In your account settings, copy the existing WakaTime API Key (https://wakatime.com/settings/account)
+2. Create a GitHub token with the `gist` scope (https://github.com/settings/tokens/new)
+3. Sign up for WakaTime and copy your API Key (https://wakatime.com/settings/account)
 
-### Project setup
+**Setup:**
 
 1. Fork this repo
-2. Go to the repo **Settings > Secrets**
-3. Add the following environment variables:
-   - **GH_TOKEN:** The GitHub token generated above.
-   - **WAKATIME_API_KEY:** The API key for your WakaTime account.
-   - **GIST_ID:** The ID portion from your gist url: `https://gist.github.com/superman66/`**`75f3b2ec23c7f69594ca3d9e8b7ea81d`**..
-4. Run workflow manually. Because workflows aren’t being run on forked repository.
+2. Go to repo **Settings → Secrets and variables → Actions**
+3. Add these **Secrets**:
 
+| Secret | Description |
+|--------|-------------|
+| `GH_TOKEN` | GitHub token with `gist` scope |
+| `WAKATIME_API_KEY` | Your WakaTime API Key |
+| `GIST_IDS` | Gist ID(s), separated by `;`. Uses first one as write target. Support yearly split: `GIST_ID_2026`, `GIST_ID_2027`... |
+| `SCU_KEY` | (Optional) ServerChan key for WeChat push |
 
-### Push Daily Report to Wechat
+4. Run workflow manually (forked repos won't auto-run)
 
-if you are using Wechat, you can use **ServerChan(http://sc.ftqq.com/)** to push wakatime daily report to your Wechat.
+> **Multi-Gist (by year):** Set `GIST_ID_2026` in Secrets for 2026 data. The sync script auto-picks the current year's Gist. Falls back to first ID in `GIST_IDS`.
 
-#### Settting
+**WeChat Daily Report:**
 
-1. Create a ServerChan account (https://sct.ftqq.com/)
-2. Copy SCKEY (https://sct.ftqq.com/sendkey)
-3. Bind your micromessage in ServerChan
-4. Add SCKEY to repo **Secrets**: **SCU_KEY**
-
-after that, you will receive Wakatime daily report everyday.
+Use [ServerChan](https://sct.ftqq.com/) to push daily reports to WeChat. Set `SCU_KEY` Secret.
 
 <p align="center">
   <img width="400" src="./screenshot/daily-report.jpg">
 </p>
 
+### 2. Dashboard Module — Visualize your data
+
+**Live demo:** `https://chendaqian.github.io/wakatime-hub/dashboard`
+
+Deploy your own:
+
+1. Go to repo **Settings → Secrets and variables → Actions → Variables**
+2. Add repository variable:
+
+| Variable | Value |
+|----------|-------|
+| `GIST_IDS` | Your Gist ID(s), separated by `;` or `,` |
+
+3. Push to `master` — GitHub Action auto-deploys to GitHub Pages
+4. Enable Pages at **Settings → Pages**: source = `gh-pages` branch, `/ (root)`
+5. Visit `https://<username>.github.io/wakatime-hub/dashboard`
+
+**Charts included:** Stacked column · Trend line · Donut pie · Calendar heatmap · AI vs Human code · Token trends · Agent cost analysis
+
+**Local dev:**
+```bash
+cd dashboard
+npm install
+npm run dev        # http://localhost:3900/wakatime-hub/dashboard/
+```
+
 ## Warning
-In addition to a specific file's contents being truncated, the entire files list may be truncated if the total number exceeds 300 files. If the top level truncated key is true, only the first 300 files have been returned in the files list. If you need to fetch all of the gist's files, you'll need to clone the gist via the URL provided by git_pull_url.
+
+Gist files list truncates at **300 files**. For long-running data, split by year (use `GIST_ID_YYYY`).
 
 [Gist Truncation](https://docs.github.com/en/rest/gists/gists?apiVersion=2022-11-28#truncation)
 
-## More Usage
+## License
 
-you can send the daily report to you email, telegram, Slack or other IM.
-If you are interest in it, take a issue or PR.
-
-## How can I use this data
-
-You can use this data in Wakatime Dashboard(http://wakatime.chenhuichao.com).
-
-You input the Gist ID, then you can see the report.
-
-<p align="center">
-  <img src="./screenshot/wakatime-dashboard.jpg">
-</p>
+MIT

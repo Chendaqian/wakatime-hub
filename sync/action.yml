@@ -1,5 +1,5 @@
-name: 'wakatime-sync'
-description: 'Back up your wakatime sync to your gist'
+name: 'wakatime-hub sync'
+description: 'Back up your WakaTime summary to Gist daily'
 branding:
   icon: 'clipboard'
   color: 'blue'
