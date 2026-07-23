@@ -27,8 +27,10 @@ jobs:
       - name: Build
         working-directory: dashboard
         env:
-          VITE_GIST_IDS: ${{ secrets.GIST_IDS }}
-        run: npm run build -- --base=/wakatime-hub/dashboard/
+          VITE_GIST_IDS: ${{ secrets.GIST_IDS || vars.GIST_IDS }}
+        run: |
+          echo "GIST_IDS length: $(echo "$VITE_GIST_IDS" | wc -c)"
+          npm run build -- --base=/wakatime-hub/dashboard/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
