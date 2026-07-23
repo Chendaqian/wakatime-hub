@@ -2,7 +2,6 @@
 
 interface ImportMetaEnv {
   readonly VITE_GIST_IDS: string
-  readonly VITE_GITHUB_TOKEN: string
 }
 
 interface ImportMeta {

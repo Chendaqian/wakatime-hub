@@ -20,13 +20,6 @@ function getDefaultGistIds(): string[] {
   return [];
 }
 
-/**
- * 获取默认的 GitHub Token（从构建时环境变量注入）
- */
-function getDefaultToken(): string {
-  return import.meta.env.VITE_GITHUB_TOKEN || '';
-}
-
 interface UseGistDataReturn {
   summaries: DailySummary[];
   status: AppStatus;
@@ -101,7 +94,7 @@ export function useGistData(): UseGistDataReturn {
     setStatus('loading');
     setError(null);
 
-    const token = localStorage.getItem(GIST_TOKEN_KEY) || getDefaultToken() || undefined;
+    const token = localStorage.getItem(GIST_TOKEN_KEY) || undefined;
 
     try {
       const allFileResults = await Promise.all(
