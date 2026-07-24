@@ -101,8 +101,8 @@ async function sendMessageToWechat(text, desp) {
   }
 }
 
-const BATCH_DELAY_MS = 60000 // 每天之间等待 60 秒，避开所有 API 限频
-const RETRY_DELAY_MS = 120000 // 429 后等待 2 分钟再重试
+const BATCH_DELAY_MS = 180000 // 每天之间等 3 分钟，彻底避开所有 API 限频
+const RETRY_DELAY_MS = 300000 // 429 后等待 5 分钟再重试
 
 /**
  * 等待指定毫秒
