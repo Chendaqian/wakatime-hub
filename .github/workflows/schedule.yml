@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '0 13 * * *'
   workflow_dispatch:
+    inputs:
+      date:
+        description: '补数据日期（不填默认今天，格式 YYYY-MM-DD）'
+        required: false
+        default: ''
 jobs:
   update-gist:
     runs-on: ubuntu-latest
@@ -18,3 +23,4 @@ jobs:
           GIST_ID_2028: ${{ secrets.GIST_ID_2028 }}
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           SCU_KEY: ${{ secrets.SCU_KEY }}
+          SYNC_DATE: ${{ github.event.inputs.date }}

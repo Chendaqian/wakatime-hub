@@ -91,9 +91,10 @@ async function sendMessageToWechat(text, desp) {
 }
 
 const fetchSummaryWithRetry = async times => {
-  const date = dayjs()
-    .utcOffset(8)
-    .format('YYYY-MM-DD')
+  const date = process.env.SYNC_DATE ||
+    dayjs()
+      .utcOffset(8)
+      .format('YYYY-MM-DD')
   try {
     const mySummary = await getMySummary(date)
     await updateGist(date, mySummary.data)
