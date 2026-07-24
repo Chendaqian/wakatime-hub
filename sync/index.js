@@ -66,25 +66,26 @@ function getMySummary(date) {
  */
 async function updateGist(date, content) {
   console.log(`[${date}] writing to Gist...`)
-  try {
-    // 使用 request 级 options 设置 user-agent，区分于默认 octokit 请求
-    await octokit.gists.update({
-      gist_id: GIST_ID,
-      files: {
-        [`summaries_${date}.json`]: {
-          content: JSON.stringify(content)
-        }
+  await octokit.gists.update({
+    gist_id: GIST_ID,
+    files: {
+      [`summaries_${date}.json`]: {
+        content: JSON.stringify(content)
       }
-    })
-    console.log(`[${date}] done`)
-  } catch (error) {
-    if (error.status === 403 || error.status === 429) {
-      console.log(`[${date}] rate limited (${error.status}), will retry...`)
-      throw error
     }
-    console.error(`[${date}] Gist update failed: ${error.message}`)
-    throw error
-  }
+  })
+  console.log(`[${date}] done`)
+}
+
+/**
+ * 同步单天数据
+ */
+async function syncDay(date) {
+  console.log(`[${date}] fetching...`)
+  const mySummary = await getMySummary(date)
+  await updateGist(date, mySummary.data)
+  console.log(`[${date}] done`)
+  return mySummary
 }
 
 /**
@@ -103,59 +104,16 @@ async function sendMessageToWechat(text, desp) {
   }
 }
 
-const BATCH_DELAY_MS = 300000 // 每天之间等 5 分钟，彻底避开所有 API 限频
-const RETRY_DELAY_MS = 600000 // 429 后等待 10 分钟再重试
-
-/**
- * 等待指定毫秒
- */
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-/**
- * 同步单天数据（返回 summary 对象供调用方复用，避免重复 API 请求）
- */
-async function syncDay(date) {
-  console.log(`[${date}] fetching...`)
-  const mySummary = await getMySummary(date)
-  await updateGist(date, mySummary.data)
-  console.log(`[${date}] done`)
-  return mySummary
-}
-
-// 单天同步（带重试 + 延迟）
-const syncDayWithRetry = async (date, times = 2) => {
-  try {
-    const mySummary = await syncDay(date)
-    await sendMessageToWechat(
-      `${date} update successfully!`,
-      getMessageContent(date, mySummary.data)
-    )
-  } catch (error) {
-    if (times === 1) {
-      console.error(`[${date}] Unable to fetch wakatime summary\n ${error} `)
-      return await sendMessageToWechat(`[${date}] failed to update wakatime data!`)
-    }
-    console.log(`[${date}] retry: ${times - 1} left, waiting ${RETRY_DELAY_MS / 1000}s...`)
-    await sleep(RETRY_DELAY_MS)
-    await syncDayWithRetry(date, times - 1)
-  }
-}
-
-/**
- * 获取需要补的日期列表
- * 优先级：SYNC_DATE 单天 > SYNC_START~SYNC_END 区间 > 今天
- */
-function getDates() {
+async function main() {
   const { SYNC_DATE, SYNC_START, SYNC_END } = process.env
 
   // 单天补数据
   if (SYNC_DATE) {
-    return [SYNC_DATE]
+    await doSync(SYNC_DATE)
+    return
   }
 
-  // 区间补数据
+  // 区间补数据（逐天串行）
   if (SYNC_START && SYNC_END) {
     const dates = []
     let cur = dayjs(SYNC_START)
@@ -164,50 +122,42 @@ function getDates() {
       dates.push(cur.format('YYYY-MM-DD'))
       cur = cur.add(1, 'day')
     }
-    return dates
+    console.log(`Backfilling ${dates.length} days: ${dates[0]} ~ ${dates[dates.length - 1]}`)
+    for (const date of dates) {
+      try {
+        await doSync(date)
+      } catch {
+        // 失败不中断，继续下一天
+      }
+      // 天与天之间等 2 秒，避免 WakaTime 限频的同时不触发 GitHub 次级限频
+      await new Promise(r => setTimeout(r, 2000))
+    }
+    console.log('All done.')
+    return
   }
 
   // 默认今天
-  return [
-    dayjs()
-      .utcOffset(8)
-      .format('YYYY-MM-DD')
-  ]
+  const today = dayjs().utcOffset(8).format('YYYY-MM-DD')
+  await doSync(today)
 }
 
-async function main() {
-  const dates = getDates()
-  const isBatch = dates.length > 1
-  console.log(`Will sync ${dates.length} day(s): ${dates[0]} ~ ${dates[dates.length - 1]}`)
-
-  for (let i = 0; i < dates.length; i++) {
-    const date = dates[i]
-    let ok = false
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await syncDay(date)
-        ok = true
-        break
-      } catch (error) {
-        if (attempt === 3) {
-          console.error(`[${date}] FAILED after 3 attempts, skipping`)
-        } else {
-          const wait = attempt === 1 ? BATCH_DELAY_MS : RETRY_DELAY_MS
-          console.log(`[${date}] attempt ${attempt}/3 failed, waiting ${wait / 1000}s...`)
-          await sleep(wait)
-        }
-      }
-    }
-    if (!ok) continue
-
-    // 批量模式：成功后天与天之间加间隔
-    if (isBatch && i < dates.length - 1) {
-      console.log(`waiting ${BATCH_DELAY_MS / 1000}s...`)
-      await sleep(BATCH_DELAY_MS)
-    }
+/**
+ * 同步一天数据（拉 WakaTime + 写 Gist + 发微信）
+ */
+async function doSync(date) {
+  console.log(`[${date}] fetching...`)
+  try {
+    const mySummary = await getMySummary(date)
+    await updateGist(date, mySummary.data)
+    console.log(`[${date}] done`)
+    await sendMessageToWechat(
+      `${date} update successfully!`,
+      getMessageContent(date, mySummary.data)
+    )
+  } catch (error) {
+    console.error(`[${date}] failed: ${error.message}`)
+    throw error
   }
-
-  console.log('All done.')
 }
 
 main()
