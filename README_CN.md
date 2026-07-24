@@ -3,6 +3,19 @@
   <p align="center">📊 自动同步 WakaTime 数据到 Gist，并提供图表可视化看板</p>
 </p>
 
+<p align="center">
+  <a href="https://github.com/Chendaqian/wakatime-hub/actions/workflows/schedule.yml"><img alt="同步状态" src="https://img.shields.io/github/actions/workflow/status/Chendaqian/wakatime-hub/schedule.yml?label=sync&style=flat-square" /></a>
+  <a href="https://github.com/Chendaqian/wakatime-hub/actions/workflows/deploy-pages.yml"><img alt="部署状态" src="https://img.shields.io/github/actions/workflow/status/Chendaqian/wakatime-hub/deploy-pages.yml?label=deploy&style=flat-square" /></a>
+  <a href="https://github.com/Chendaqian/wakatime-hub/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/Chendaqian/wakatime-hub?include_prereleases&style=flat-square" /></a>
+  <a href="https://github.com/Chendaqian/wakatime-hub/blob/master/LICENSE"><img alt="许可证" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
+  <a href="https://github.com/Chendaqian/wakatime-hub/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/Chendaqian/wakatime-hub?style=flat-square" /></a>
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=nodedotjs&logoColor=white" />
+  <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white" />
+  <img alt="平台" src="https://img.shields.io/badge/平台-GitHub%20Pages-222222?style=flat-square&logo=githubpages&logoColor=white" />
+</p>
+
 ---
 
 [English](README.md)
@@ -146,3 +159,13 @@ VITE_GIST_IDS="你的gist-id" npm run dev
 ## License
 
 MIT
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=Chendaqian%2Fwakatime-hub&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Chendaqian%2Fwakatime-hub&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Chendaqian%2Fwakatime-hub&type=date&legend=top-left" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Chendaqian%2Fwakatime-hub&type=date&legend=top-left" />
+  </picture>
+</a>
