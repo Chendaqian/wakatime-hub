@@ -90,30 +90,42 @@ async function sendMessageToWechat(text, desp) {
   }
 }
 
+const BATCH_DELAY_MS = 30000 // 避开 WakaTime 与 GitHub API 双重限频
+const RETRY_DELAY_MS = 60000 // 429 限频后等待 60 秒再重试
+
 /**
- * 同步单天数据
+ * 等待指定毫秒
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * 同步单天数据（返回 summary 对象供调用方复用，避免重复 API 请求）
  */
 async function syncDay(date) {
   console.log(`[${date}] fetching...`)
   const mySummary = await getMySummary(date)
   await updateGist(date, mySummary.data)
   console.log(`[${date}] done`)
+  return mySummary
 }
 
-// 单天同步（带重试）
-const syncDayWithRetry = async (date, times = 3) => {
+// 单天同步（带重试 + 延迟）
+const syncDayWithRetry = async (date, times = 2) => {
   try {
-    await syncDay(date)
+    const mySummary = await syncDay(date)
     await sendMessageToWechat(
       `${date} update successfully!`,
-      getMessageContent(date, (await getMySummary(date)).data)
+      getMessageContent(date, mySummary.data)
     )
   } catch (error) {
     if (times === 1) {
       console.error(`[${date}] Unable to fetch wakatime summary\n ${error} `)
       return await sendMessageToWechat(`[${date}] failed to update wakatime data!`)
     }
-    console.log(`[${date}] retry: ${times - 1} left`)
+    console.log(`[${date}] retry: ${times - 1} left, waiting ${RETRY_DELAY_MS / 1000}s...`)
+    await sleep(RETRY_DELAY_MS)
     await syncDayWithRetry(date, times - 1)
   }
 }
@@ -148,12 +160,6 @@ function getDates() {
       .utcOffset(8)
       .format('YYYY-MM-DD')
   ]
-}
-
-const BATCH_DELAY_MS = 7000 // 避开 WakaTime 限频（10次/分钟）
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 async function main() {
