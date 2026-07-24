@@ -115,25 +115,42 @@ async function main() {
 
   // 区间补数据（逐天串行）
   if (SYNC_START && SYNC_END) {
-    const dates = []
-    let cur = dayjs(SYNC_START)
-    const end = dayjs(SYNC_END)
-    while (cur.isBefore(end) || cur.isSame(end, 'day')) {
-      dates.push(cur.format('YYYY-MM-DD'))
-      cur = cur.add(1, 'day')
-    }
-    console.log(`Backfilling ${dates.length} days: ${dates[0]} ~ ${dates[dates.length - 1]}`)
-    for (const date of dates) {
-      try {
-        await doSync(date)
-      } catch {
-        // 失败不中断，继续下一天
+    // 先拉取 Gist 中已有日期，跳过已存在的
+    console.log(`Backfilling ${SYNC_START} ~ ${SYNC_END}, checking existing files...`)
+    try {
+      const gist = await octokit.gists.get({ gist_id: GIST_ID })
+      const existingFiles = Object.keys(gist.data.files)
+      const existingDates = new Set(
+        existingFiles
+          .filter(f => f.startsWith('summaries_'))
+          .map(f => f.substring(10, 20))
+      )
+      const dates = []
+      let cur = dayjs(SYNC_START)
+      const end = dayjs(SYNC_END)
+      while (cur.isBefore(end) || cur.isSame(end, 'day')) {
+        const d = cur.format('YYYY-MM-DD')
+        if (!existingDates.has(d)) {
+          dates.push(d)
+        }
+        cur = cur.add(1, 'day')
       }
-      // 天与天之间等 7 秒，避开 WakaTime 限频（10次/分钟）
-      await new Promise(r => setTimeout(r, 7000))
+      console.log(`${dates.length} day(s) to sync (${SYNC_START} ~ ${SYNC_END})`)
+      for (const date of dates) {
+        try {
+          await doSync(date)
+        } catch {
+          // 失败不中断，继续下一天
+        }
+        // 天与天之间等 7 秒，避开 WakaTime 限频（10次/分钟）
+        await new Promise(r => setTimeout(r, 7000))
+      }
+      console.log('All done.')
+      return
+    } catch (error) {
+      console.error(`Failed to fetch Gist files: ${error.message}`)
+      return
     }
-    console.log('All done.')
-    return
   }
 
   // 默认今天
