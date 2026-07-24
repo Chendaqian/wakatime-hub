@@ -63,15 +63,26 @@ function getMySummary(date) {
  * @param {*} content update content
  */
 async function updateGist(date, content) {
-  console.log(`Writing to Gist ${GIST_ID}...`)
-  await octokit.gists.update({
-    gist_id: GIST_ID,
-    files: {
-      [`summaries_${date}.json`]: {
-        content: JSON.stringify(content)
+  console.log(`[${date}] writing to Gist...`)
+  try {
+    await octokit.gists.update({
+      gist_id: GIST_ID,
+      files: {
+        [`summaries_${date}.json`]: {
+          content: JSON.stringify(content)
+        }
       }
+    })
+    console.log(`[${date}] done`)
+  } catch (error) {
+    // 区分限频错误：429 不抛出，等外层重试；其他错误直接抛出
+    if (error.status === 403 || error.status === 429) {
+      console.log(`[${date}] rate limited (${error.status}), will retry...`)
+      throw error
     }
-  })
+    console.error(`[${date}] Gist update failed: ${error.message}`)
+    throw error
+  }
 }
 
 /**
@@ -90,8 +101,8 @@ async function sendMessageToWechat(text, desp) {
   }
 }
 
-const BATCH_DELAY_MS = 30000 // 避开 WakaTime 与 GitHub API 双重限频
-const RETRY_DELAY_MS = 60000 // 429 限频后等待 60 秒再重试
+const BATCH_DELAY_MS = 60000 // 每天之间等待 60 秒，避开所有 API 限频
+const RETRY_DELAY_MS = 120000 // 429 后等待 2 分钟再重试
 
 /**
  * 等待指定毫秒
@@ -168,9 +179,28 @@ async function main() {
   console.log(`Will sync ${dates.length} day(s): ${dates[0]} ~ ${dates[dates.length - 1]}`)
 
   for (let i = 0; i < dates.length; i++) {
-    await syncDayWithRetry(dates[i])
+    const date = dates[i]
+    let ok = false
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await syncDay(date)
+        ok = true
+        break
+      } catch (error) {
+        if (attempt === 3) {
+          console.error(`[${date}] FAILED after 3 attempts, skipping`)
+        } else {
+          const wait = attempt === 1 ? BATCH_DELAY_MS : RETRY_DELAY_MS
+          console.log(`[${date}] attempt ${attempt}/3 failed, waiting ${wait / 1000}s...`)
+          await sleep(wait)
+        }
+      }
+    }
+    if (!ok) continue
+
+    // 批量模式：成功后天与天之间加间隔
     if (isBatch && i < dates.length - 1) {
-      console.log(`waiting ${BATCH_DELAY_MS / 1000}s for rate limit...`)
+      console.log(`waiting ${BATCH_DELAY_MS / 1000}s...`)
       await sleep(BATCH_DELAY_MS)
     }
   }
