@@ -17,6 +17,7 @@ yarn-error.log*
 /bower_components
 sync/node_modules
 sync/dist
+!sync/dist/index.js
 
 # Yarn Integrity file
 .yarn-integrity
