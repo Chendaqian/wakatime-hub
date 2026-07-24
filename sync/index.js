@@ -68,6 +68,7 @@ async function updateGist(date, content) {
   console.log(`[${date}] writing to Gist...`)
   await octokit.gists.update({
     gist_id: GIST_ID,
+    description: 'wakatime2026',
     files: {
       [`summaries_${date}.json`]: {
         content: JSON.stringify(content)
