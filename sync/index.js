@@ -150,12 +150,23 @@ function getDates() {
   ]
 }
 
+const BATCH_DELAY_MS = 7000 // 避开 WakaTime 限频（10次/分钟）
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 async function main() {
   const dates = getDates()
+  const isBatch = dates.length > 1
   console.log(`Will sync ${dates.length} day(s): ${dates[0]} ~ ${dates[dates.length - 1]}`)
 
-  for (const date of dates) {
-    await syncDayWithRetry(date)
+  for (let i = 0; i < dates.length; i++) {
+    await syncDayWithRetry(dates[i])
+    if (isBatch && i < dates.length - 1) {
+      console.log(`waiting ${BATCH_DELAY_MS / 1000}s for rate limit...`)
+      await sleep(BATCH_DELAY_MS)
+    }
   }
 
   console.log('All done.')
