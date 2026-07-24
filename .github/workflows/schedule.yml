@@ -5,7 +5,15 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: '补数据日期（不填默认今天，格式 YYYY-MM-DD）'
+        description: '单天补数据（格式 YYYY-MM-DD，优先于区间）'
+        required: false
+        default: ''
+      start_date:
+        description: '区间起始日期（格式 YYYY-MM-DD）'
+        required: false
+        default: ''
+      end_date:
+        description: '区间结束日期（格式 YYYY-MM-DD）'
         required: false
         default: ''
 jobs:
@@ -24,3 +32,5 @@ jobs:
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           SCU_KEY: ${{ secrets.SCU_KEY }}
           SYNC_DATE: ${{ github.event.inputs.date }}
+          SYNC_START: ${{ github.event.inputs.start_date }}
+          SYNC_END: ${{ github.event.inputs.end_date }}

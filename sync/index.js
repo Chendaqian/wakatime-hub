@@ -90,30 +90,75 @@ async function sendMessageToWechat(text, desp) {
   }
 }
 
-const fetchSummaryWithRetry = async times => {
-  const date = process.env.SYNC_DATE ||
-    dayjs()
-      .utcOffset(8)
-      .format('YYYY-MM-DD')
+/**
+ * 同步单天数据
+ */
+async function syncDay(date) {
+  console.log(`[${date}] fetching...`)
+  const mySummary = await getMySummary(date)
+  await updateGist(date, mySummary.data)
+  console.log(`[${date}] done`)
+}
+
+// 单天同步（带重试）
+const syncDayWithRetry = async (date, times = 3) => {
   try {
-    const mySummary = await getMySummary(date)
-    await updateGist(date, mySummary.data)
+    await syncDay(date)
     await sendMessageToWechat(
       `${date} update successfully!`,
-      getMessageContent(date, mySummary.data)
+      getMessageContent(date, (await getMySummary(date)).data)
     )
   } catch (error) {
     if (times === 1) {
-      console.error(`Unable to fetch wakatime summary\n ${error} `)
-      return await sendMessageToWechat(`[${date}]failed to update wakatime data!`)
+      console.error(`[${date}] Unable to fetch wakatime summary\n ${error} `)
+      return await sendMessageToWechat(`[${date}] failed to update wakatime data!`)
     }
-    console.log(`retry fetch summary data: ${times - 1} time`)
-    await fetchSummaryWithRetry(times - 1)
+    console.log(`[${date}] retry: ${times - 1} left`)
+    await syncDayWithRetry(date, times - 1)
   }
 }
 
+/**
+ * 获取需要补的日期列表
+ * 优先级：SYNC_DATE 单天 > SYNC_START~SYNC_END 区间 > 今天
+ */
+function getDates() {
+  const { SYNC_DATE, SYNC_START, SYNC_END } = process.env
+
+  // 单天补数据
+  if (SYNC_DATE) {
+    return [SYNC_DATE]
+  }
+
+  // 区间补数据
+  if (SYNC_START && SYNC_END) {
+    const dates = []
+    let cur = dayjs(SYNC_START)
+    const end = dayjs(SYNC_END)
+    while (cur.isBefore(end) || cur.isSame(end, 'day')) {
+      dates.push(cur.format('YYYY-MM-DD'))
+      cur = cur.add(1, 'day')
+    }
+    return dates
+  }
+
+  // 默认今天
+  return [
+    dayjs()
+      .utcOffset(8)
+      .format('YYYY-MM-DD')
+  ]
+}
+
 async function main() {
-  await fetchSummaryWithRetry(3)
+  const dates = getDates()
+  console.log(`Will sync ${dates.length} day(s): ${dates[0]} ~ ${dates[dates.length - 1]}`)
+
+  for (const date of dates) {
+    await syncDayWithRetry(date)
+  }
+
+  console.log('All done.')
 }
 
 main()
