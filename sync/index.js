@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 const { WakaTimeClient, RANGE } = require('wakatime-client')
 const dayjs = require('dayjs')
 const utc = require('dayjs/plugin/utc')

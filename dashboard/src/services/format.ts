@@ -1,6 +1,12 @@
 /**
- * 秒数转可读时间格式
+ * 秒数转 shields.io 徽标标签格式：7,117 hrs 57 mins
  */
+export function secondsToBadgeLabel(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${hours.toLocaleString()} hrs ${minutes} mins`;
+}
+
 export function secondsToReadable(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);

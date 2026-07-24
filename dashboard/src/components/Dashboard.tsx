@@ -24,8 +24,17 @@ import {
   extractAITokenTrend,
   extractAIAgentCost,
 } from '@/services/AIMetricsTransformer';
+import { secondsToBadgeLabel, secondsToReadable } from '@/services/format';
 import type { DimensionType } from '@/types';
 import styles from './Dashboard.module.css';
+
+/**
+ * 生成 shields.io Code Time 徽标 URL（按当周累计）
+ */
+function getCodeTimeBadgeUrl(totalSeconds: number): string {
+  const label = secondsToBadgeLabel(totalSeconds);
+  return `https://img.shields.io/badge/Code%20Time-${encodeURIComponent(label)}-blue?style=flat`;
+}
 
 export function Dashboard() {
   const { summaries, status, error, gistIds, loadData, resetConfig } = useGistData();
@@ -89,6 +98,25 @@ export function Dashboard() {
     [filteredSummaries]
   );
 
+  // 全部历史总时长（用于 Code Time 徽标）
+  const totalCodeTime = useMemo(
+    () => summaries.reduce((sum, s) => sum + s.grand_total.total_seconds, 0),
+    [summaries]
+  );
+
+  // 当周总时长（用于顶部徽标）
+  const startOfWeek = dayjs().startOf('week').format('YYYY-MM-DD');
+  const endOfWeek = dayjs().endOf('week').format('YYYY-MM-DD');
+  const weekSummaries = useMemo(
+    () => filterByDateRange(summaries, startOfWeek, endOfWeek),
+    [summaries, startOfWeek, endOfWeek]
+  );
+  const weekSeconds = useMemo(
+    () => weekSummaries.reduce((sum, s) => sum + s.grand_total.total_seconds, 0),
+    [weekSummaries]
+  );
+  const weekLabel = useMemo(() => secondsToReadable(weekSeconds), [weekSeconds]);
+
   const isLoading = status === 'loading';
 
   const handleReset = useCallback(() => {
@@ -127,10 +155,28 @@ export function Dashboard() {
   return (
     <div className={styles.dashboardContainer}>
       <header className={styles.header}>
-        <h1>WakaTime Hub</h1>
-        <span className={styles.gistBadge}>
-          {gistIds.length} 个数据源
-        </span>
+        <div className={styles.headerLeft}>
+          <h1>WakaTime Hub</h1>
+          <div className={styles.badges}>
+            {totalCodeTime > 0 && (
+              <img
+                className={styles.codeTimeBadge}
+                src={getCodeTimeBadgeUrl(totalCodeTime)}
+                alt="Code Time"
+                loading="lazy"
+              />
+            )}
+            <span className={styles.gistBadge} data-count={gistIds.length}>
+              {gistIds.length} 个数据源
+            </span>
+          </div>
+        </div>
+        <div className={styles.headerRight}>
+          <div className={styles.weekStat}>
+            <span className={styles.weekLabel}>本周</span>
+            <span className={styles.weekValue}>{weekLabel}</span>
+          </div>
+        </div>
       </header>
 
       <div className={styles.content}>

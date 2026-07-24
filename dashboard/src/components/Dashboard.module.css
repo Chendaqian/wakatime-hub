@@ -29,6 +29,28 @@
   }
 }
 
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.codeTimeBadge {
+  height: 20px;
+  border-radius: 3px;
+}
+
 .gistBadge {
   display: flex;
   align-items: center;
@@ -48,6 +70,32 @@
     background: #22c55e;
     box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
   }
+}
+
+/* ===== Week Stat ===== */
+.weekStat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.875rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 999px;
+}
+
+.weekLabel {
+  font-size: 0.688rem;
+  font-weight: 500;
+  color: #a5b4fc;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.weekValue {
+  font-size: 0.813rem;
+  font-weight: 700;
+  color: #e0e7ff;
+  letter-spacing: -0.02em;
 }
 
 /* ===== Content ===== */
