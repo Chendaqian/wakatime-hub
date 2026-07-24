@@ -63,19 +63,15 @@ function getMySummary(date) {
  * @param {*} content update content
  */
 async function updateGist(date, content) {
-  const file = ''
-  try {
-    await octokit.gists.update({
-      gist_id: GIST_ID,
-      files: {
-        [`summaries_${date}.json`]: {
-          content: JSON.stringify(content)
-        }
+  console.log(`Writing to Gist ${GIST_ID}...`)
+  await octokit.gists.update({
+    gist_id: GIST_ID,
+    files: {
+      [`summaries_${date}.json`]: {
+        content: JSON.stringify(content)
       }
-    })
-  } catch (error) {
-    console.error(`Unable to update gist \n ${error}`)
-  }
+    }
+  })
 }
 
 /**
@@ -111,12 +107,12 @@ const fetchSummaryWithRetry = async times => {
       return await sendMessageToWechat(`[${date}]failed to update wakatime data!`)
     }
     console.log(`retry fetch summary data: ${times - 1} time`)
-    fetchSummaryWithRetry(times - 1)
+    await fetchSummaryWithRetry(times - 1)
   }
 }
 
 async function main() {
-  fetchSummaryWithRetry(3)
+  await fetchSummaryWithRetry(3)
 }
 
 main()
