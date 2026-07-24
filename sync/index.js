@@ -1,10 +1,10 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') })
+const { Octokit } = require('@octokit/rest')
+const Axios = require('axios')
 const { WakaTimeClient, RANGE } = require('wakatime-client')
 const dayjs = require('dayjs')
 const utc = require('dayjs/plugin/utc')
 dayjs.extend(utc)
-const { Octokit } = require('@octokit/rest')
-const Axios = require('axios')
 
 const { WAKATIME_API_KEY, GH_TOKEN, SCU_KEY } = process.env
 // 按年份取对应的 Gist ID（Secrets 里配 GIST_ID_2026、GIST_ID_2027 ...）
@@ -22,7 +22,9 @@ const scuPushApi = `https://sctapi.ftqq.com`
 
 const wakatime = new WakaTimeClient(WAKATIME_API_KEY)
 const octokit = new Octokit({
-  auth: `token ${GH_TOKEN}`
+  auth: `token ${GH_TOKEN}`,
+  userAgent: 'wakatime-hub/1.0',
+  request: { timeout: 30000 }
 })
 
 function getItemContent(title, content) {
@@ -65,6 +67,7 @@ function getMySummary(date) {
 async function updateGist(date, content) {
   console.log(`[${date}] writing to Gist...`)
   try {
+    // 使用 request 级 options 设置 user-agent，区分于默认 octokit 请求
     await octokit.gists.update({
       gist_id: GIST_ID,
       files: {
@@ -75,7 +78,6 @@ async function updateGist(date, content) {
     })
     console.log(`[${date}] done`)
   } catch (error) {
-    // 区分限频错误：429 不抛出，等外层重试；其他错误直接抛出
     if (error.status === 403 || error.status === 429) {
       console.log(`[${date}] rate limited (${error.status}), will retry...`)
       throw error
@@ -101,8 +103,8 @@ async function sendMessageToWechat(text, desp) {
   }
 }
 
-const BATCH_DELAY_MS = 180000 // 每天之间等 3 分钟，彻底避开所有 API 限频
-const RETRY_DELAY_MS = 300000 // 429 后等待 5 分钟再重试
+const BATCH_DELAY_MS = 300000 // 每天之间等 5 分钟，彻底避开所有 API 限频
+const RETRY_DELAY_MS = 600000 // 429 后等待 10 分钟再重试
 
 /**
  * 等待指定毫秒
