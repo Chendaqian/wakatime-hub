@@ -129,8 +129,8 @@ async function main() {
       } catch {
         // 失败不中断，继续下一天
       }
-      // 天与天之间等 2 秒，避免 WakaTime 限频的同时不触发 GitHub 次级限频
-      await new Promise(r => setTimeout(r, 2000))
+      // 天与天之间等 7 秒，避开 WakaTime 限频（10次/分钟）
+      await new Promise(r => setTimeout(r, 7000))
     }
     console.log('All done.')
     return
@@ -138,7 +138,11 @@ async function main() {
 
   // 默认今天
   const today = dayjs().utcOffset(8).format('YYYY-MM-DD')
-  await doSync(today)
+  try {
+    await doSync(today)
+  } catch {
+    // 忽略 —— 由 doSync 内部处理日志
+  }
 }
 
 /**
