@@ -13,5 +13,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GIST_IDS: ${{ secrets.GIST_IDS || secrets.GIST_ID }}
+          GIST_ID_2026: ${{ secrets.GIST_ID_2026 }}
+          GIST_ID_2027: ${{ secrets.GIST_ID_2027 }}
+          GIST_ID_2028: ${{ secrets.GIST_ID_2028 }}
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           SCU_KEY: ${{ secrets.SCU_KEY }}
