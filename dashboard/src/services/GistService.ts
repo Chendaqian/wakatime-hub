@@ -14,11 +14,12 @@ function extractDateFromFilename(filename: string): string | null {
 
 /**
  * 获取 Gist 文件列表，筛选出 summaries_*.json 文件
+ * 返回 content（从 Gist API 直接获取，避免逐个下载 raw_url 触发限频）
  */
 export async function fetchGistFiles(
   gistId: string,
   token?: string
-): Promise<Array<{ filename: string; rawUrl: string; date: string }>> {
+): Promise<Array<{ filename: string; rawUrl: string; date: string; content: string | null }>> {
   const headers: Record<string, string> = {};
   if (token) {
     headers.Authorization = `token ${token}`;
@@ -30,15 +31,17 @@ export async function fetchGistFiles(
   );
 
   const files = response.data.files;
-  const summaryFiles: Array<{ filename: string; rawUrl: string; date: string }> = [];
+  const summaryFiles: Array<{ filename: string; rawUrl: string; date: string; content: string | null }> = [];
 
   for (const [filename, file] of Object.entries(files)) {
     const date = extractDateFromFilename(filename);
-    if (date && file.raw_url) {
+    if (date) {
       summaryFiles.push({
         filename,
-        rawUrl: file.raw_url,
+        rawUrl: file.raw_url || '',
         date,
+        // Gist API 自带文件内容（未截断时），省去逐个下载
+        content: file.content || null,
       });
     }
   }
@@ -50,47 +53,49 @@ export async function fetchGistFiles(
 }
 
 /**
- * 获取并解析单个 summary JSON 文件
+ * 从 Gist API 返回的文件列表中直接解析 summary，不额外发请求
+ * 如果 content 为空（极少情况，Gist 被截断），则回退到 raw_url 下载
  */
-export async function fetchSingleSummary(rawUrl: string): Promise<WakaTimeSummary | null> {
-  try {
-    const response = await axios.get(rawUrl);
-    // 数据是数组格式，取第一个元素
-    const data = response.data;
-    if (Array.isArray(data) && data.length > 0) {
-      return data[0] as WakaTimeSummary;
-    }
-    return null;
-  } catch (error) {
-    console.error(`Failed to fetch summary from ${rawUrl}:`, error);
-    return null;
-  }
-}
-
-/**
- * 批量获取指定日期范围内的 summary 数据
- */
-export async function fetchSummariesByFiles(
-  files: Array<{ filename: string; rawUrl: string; date: string }>
+export async function fetchSummariesFromGistFiles(
+  files: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>
 ): Promise<DailySummary[]> {
   const results: DailySummary[] = [];
 
-  // 并行请求所有文件
-  const promises = files.map(async (file) => {
-    const summary = await fetchSingleSummary(file.rawUrl);
-    if (summary) {
-      return {
-        date: file.date,
-        ...summary,
-      } as DailySummary;
+  // 先尝试从 content 直接解析（无需网络请求）
+  const needFetch: Array<{ rawUrl: string; date: string }> = [];
+  for (const file of files) {
+    if (file.content) {
+      try {
+        const data = JSON.parse(file.content);
+        if (Array.isArray(data) && data.length > 0) {
+          results.push({ date: file.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
+          continue;
+        }
+      } catch {
+        // parse 失败，回退到下载
+      }
     }
-    return null;
-  });
+    needFetch.push({ rawUrl: file.rawUrl, date: file.date });
+  }
 
-  const resolved = await Promise.all(promises);
-  for (const item of resolved) {
-    if (item) {
-      results.push(item);
+  // 回退：对没有 content 的文件逐个下载
+  if (needFetch.length > 0) {
+    const fetched = await Promise.all(
+      needFetch.map(async (f) => {
+        try {
+          const r = await axios.get(f.rawUrl);
+          const data = r.data;
+          if (Array.isArray(data) && data.length > 0) {
+            return { date: f.date, ...(data[0] as WakaTimeSummary) } as DailySummary;
+          }
+        } catch {
+          // skip failed
+        }
+        return null;
+      })
+    );
+    for (const item of fetched) {
+      if (item) results.push(item);
     }
   }
 

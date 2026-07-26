@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { DailySummary, AppStatus } from '@/types';
-import { fetchGistFiles, fetchSummariesByFiles } from '@/services/GistService';
+import { fetchGistFiles, fetchSummariesFromGistFiles } from '@/services/GistService';
 
 const CACHE_KEY = 'wakatime_gist_cache';
 const GIST_IDS_KEY = 'wakatime_gist_ids';
@@ -97,21 +97,33 @@ export function useGistData(): UseGistDataReturn {
     const token = localStorage.getItem(GIST_TOKEN_KEY) || undefined;
 
     try {
+      // 并发拉 16 个 Gist 元数据（每个响应自带文件 content）
       const allFileResults = await Promise.all(
         gistIds.map(async (gistId) => {
           const cached = sessionStorage.getItem(`${CACHE_KEY}_${gistId}`);
           if (cached) {
-            return JSON.parse(cached) as Array<{ filename: string; rawUrl: string; date: string }>;
+            try {
+              return JSON.parse(cached) as Array<{ filename: string; rawUrl: string; date: string; content: string | null }>;
+            } catch {
+              // 缓存损坏，重新拉
+            }
           }
           const files = await fetchGistFiles(gistId, token);
           if (files.length > 0) {
-            sessionStorage.setItem(`${CACHE_KEY}_${gistId}`, JSON.stringify(files));
+            try {
+              // 只缓存元信息（不含 content），避免超出 sessionStorage 5MB 限制
+              const meta = files.map(f => ({ filename: f.filename, rawUrl: f.rawUrl, date: f.date }));
+              sessionStorage.setItem(`${CACHE_KEY}_${gistId}`, JSON.stringify(meta));
+            } catch {
+              // 缓存满了就跳过，不影响主流程
+            }
           }
           return files;
         })
       );
 
-      const fileMap = new Map<string, { filename: string; rawUrl: string; date: string }>();
+      // 合并去重：按日期优先
+      const fileMap = new Map<string, { filename: string; rawUrl: string; date: string; content: string | null }>();
       for (const files of allFileResults) {
         for (const f of files) {
           if (!fileMap.has(f.date)) {
@@ -130,16 +142,8 @@ export function useGistData(): UseGistDataReturn {
         return;
       }
 
-      // Batch fetch for large datasets (e.g. 800+ files per gist)
-      // Each batch = 50 parallel requests to avoid overwhelming the browser
-      const toFetch = mergedFiles.slice(0, 2000);
-      const batchSize = 50;
-      const allSummaries: DailySummary[] = [];
-      for (let i = 0; i < toFetch.length; i += batchSize) {
-        const batch = toFetch.slice(i, i + batchSize);
-        const batchData = await fetchSummariesByFiles(batch);
-        allSummaries.push(...batchData);
-      }
+      // 直接从 Gist API 的 content 字段解析，无需额外网络请求
+      const allSummaries = await fetchSummariesFromGistFiles(mergedFiles);
       setSummaries(allSummaries);
       setStatus('ready');
     } catch (err: unknown) {
