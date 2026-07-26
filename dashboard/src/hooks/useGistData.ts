@@ -97,7 +97,7 @@ export function useGistData(): UseGistDataReturn {
     const token = localStorage.getItem(GIST_TOKEN_KEY) || undefined;
 
     try {
-      // 逐 Gist 串行拉取（每次间隔 800ms），避免未认证 GitHub API 限频（~10次/分钟）
+      // 逐 Gist 串行拉取（每次间隔 8s），避免未认证 GitHub API 10次/分钟限频
       const allFileResults: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>[] = [];
       for (let i = 0; i < gistIds.length; i++) {
         const gistId = gistIds[i];
@@ -106,22 +106,23 @@ export function useGistData(): UseGistDataReturn {
           try {
             allFileResults.push(JSON.parse(cached));
             continue;
-          } catch {
-            // 缓存损坏，重新拉
-          }
+          } catch {}
         }
         const files = await fetchGistFiles(gistId, token);
+        // 如果被限频，等待 60s 后重试
+        if (files.length === 0 && i < gistIds.length - 1) {
+          // 很可能是 403 限频，等一分钟再继续
+          await new Promise(r => setTimeout(r, 60000));
+        }
         if (files.length > 0) {
           try {
             const meta = files.map(f => ({ filename: f.filename, rawUrl: f.rawUrl, date: f.date }));
             sessionStorage.setItem(`${CACHE_KEY}_${gistId}`, JSON.stringify(meta));
-          } catch {
-            // 缓存满了就跳过
-          }
+          } catch {}
         }
         allFileResults.push(files);
-        // 间隔 800ms，让 16 个 Gist 约 13s 完成，避免触发 GitHub 60次/小时限频
-        if (i < gistIds.length - 1) await new Promise(r => setTimeout(r, 800));
+        // 间隔 8s，16 个 Gist 约 128s 完成，保持在 60次/小时 限额内
+        if (i < gistIds.length - 1) await new Promise(r => setTimeout(r, 8000));
       }
 
       // 合并去重：按日期优先
