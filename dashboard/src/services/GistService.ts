@@ -26,7 +26,7 @@ export async function fetchGistFiles(
   }
 
   const response = await axios.get<GistResponse>(
-    `${GIST_API_BASE}/gists/${gistId}`,
+    `${GIST_API_BASE}/gists/${gistId}?_=${Date.now()}`,
     { headers }
   );
 
