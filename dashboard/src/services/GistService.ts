@@ -78,22 +78,22 @@ export async function fetchSummariesFromGistFiles(
     needFetch.push({ rawUrl: file.rawUrl, date: file.date });
   }
 
-  // 回退：对没有 content 的文件逐个下载
+  // 回退：对没有 content 的文件串行下载（避免并发触发限频）
   if (needFetch.length > 0) {
-    const fetched = await Promise.all(
-      needFetch.map(async (f) => {
-        try {
-          const r = await axios.get(f.rawUrl);
-          const data = r.data;
-          if (Array.isArray(data) && data.length > 0) {
-            return { date: f.date, ...(data[0] as WakaTimeSummary) } as DailySummary;
-          }
-        } catch {
-          // skip failed
+    const fetched: Array<DailySummary | null> = [];
+    for (const f of needFetch) {
+      try {
+        const r = await axios.get(f.rawUrl);
+        const data = r.data;
+        if (Array.isArray(data) && data.length > 0) {
+          fetched.push({ date: f.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
+        } else {
+          fetched.push(null);
         }
-        return null;
-      })
-    );
+      } catch {
+        fetched.push(null);
+      }
+    }
     for (const item of fetched) {
       if (item) results.push(item);
     }
