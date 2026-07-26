@@ -97,30 +97,32 @@ export function useGistData(): UseGistDataReturn {
     const token = localStorage.getItem(GIST_TOKEN_KEY) || undefined;
 
     try {
-      // 并发拉 16 个 Gist 元数据（每个响应自带文件 content）
-      const allFileResults = await Promise.all(
-        gistIds.map(async (gistId) => {
-          const cached = sessionStorage.getItem(`${CACHE_KEY}_${gistId}`);
-          if (cached) {
-            try {
-              return JSON.parse(cached) as Array<{ filename: string; rawUrl: string; date: string; content: string | null }>;
-            } catch {
-              // 缓存损坏，重新拉
-            }
+      // 逐 Gist 串行拉取（每次间隔 800ms），避免未认证 GitHub API 限频（~10次/分钟）
+      const allFileResults: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>[] = [];
+      for (let i = 0; i < gistIds.length; i++) {
+        const gistId = gistIds[i];
+        const cached = sessionStorage.getItem(`${CACHE_KEY}_${gistId}`);
+        if (cached) {
+          try {
+            allFileResults.push(JSON.parse(cached));
+            continue;
+          } catch {
+            // 缓存损坏，重新拉
           }
-          const files = await fetchGistFiles(gistId, token);
-          if (files.length > 0) {
-            try {
-              // 只缓存元信息（不含 content），避免超出 sessionStorage 5MB 限制
-              const meta = files.map(f => ({ filename: f.filename, rawUrl: f.rawUrl, date: f.date }));
-              sessionStorage.setItem(`${CACHE_KEY}_${gistId}`, JSON.stringify(meta));
-            } catch {
-              // 缓存满了就跳过，不影响主流程
-            }
+        }
+        const files = await fetchGistFiles(gistId, token);
+        if (files.length > 0) {
+          try {
+            const meta = files.map(f => ({ filename: f.filename, rawUrl: f.rawUrl, date: f.date }));
+            sessionStorage.setItem(`${CACHE_KEY}_${gistId}`, JSON.stringify(meta));
+          } catch {
+            // 缓存满了就跳过
           }
-          return files;
-        })
-      );
+        }
+        allFileResults.push(files);
+        // 间隔 800ms，让 16 个 Gist 约 13s 完成，避免触发 GitHub 60次/小时限频
+        if (i < gistIds.length - 1) await new Promise(r => setTimeout(r, 800));
+      }
 
       // 合并去重：按日期优先
       const fileMap = new Map<string, { filename: string; rawUrl: string; date: string; content: string | null }>();
@@ -142,7 +144,7 @@ export function useGistData(): UseGistDataReturn {
         return;
       }
 
-      // 直接从 Gist API 的 content 字段解析，无需额外网络请求
+      // 直接从 Gist API 的 content 字段解析
       const allSummaries = await fetchSummariesFromGistFiles(mergedFiles);
       setSummaries(allSummaries);
       setStatus('ready');
