@@ -53,15 +53,15 @@ export async function fetchGistFiles(
 }
 
 /**
- * 从 Gist API 返回的文件列表中直接解析 summary，不额外发请求
- * 如果 content 为空（极少情况，Gist 被截断），则回退到 raw_url 下载
+ * 从 Gist API 返回的文件列表中直接解析 summary
+ * 如果 content 为空（Gist 被截断），则回退到 raw_url 下载（带重试和间隔）
  */
 export async function fetchSummariesFromGistFiles(
   files: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>
 ): Promise<DailySummary[]> {
   const results: DailySummary[] = [];
 
-  // 先尝试从 content 直接解析（无需网络请求）
+  // 先尝试从 content 直接解析
   const needFetch: Array<{ rawUrl: string; date: string }> = [];
   for (const file of files) {
     if (file.content) {
@@ -71,36 +71,31 @@ export async function fetchSummariesFromGistFiles(
           results.push({ date: file.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
           continue;
         }
-      } catch {
-        // parse 失败，回退到下载
-      }
+      } catch {}
     }
     needFetch.push({ rawUrl: file.rawUrl, date: file.date });
   }
 
-  // 回退：对没有 content 的文件串行下载（避免并发触发限频）
+  // 回退：串行下载（带间隔防限频）
   if (needFetch.length > 0) {
-    const fetched: Array<DailySummary | null> = [];
     for (const f of needFetch) {
-      try {
-        const r = await axios.get(f.rawUrl);
-        const data = r.data;
-        if (Array.isArray(data) && data.length > 0) {
-          fetched.push({ date: f.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
-        } else {
-          fetched.push(null);
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const r = await axios.get(f.rawUrl);
+          const data = r.data;
+          if (Array.isArray(data) && data.length > 0) {
+            results.push({ date: f.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
+          }
+          break;
+        } catch (e) {
+          if (e.response?.status === 403 && attempt < 2) {
+            await new Promise(r => setTimeout(r, 30000));
+          }
         }
-      } catch {
-        fetched.push(null);
       }
-    }
-    for (const item of fetched) {
-      if (item) results.push(item);
     }
   }
 
-  // 按日期升序排列
   results.sort((a, b) => a.date.localeCompare(b.date));
-
   return results;
 }
