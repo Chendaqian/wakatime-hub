@@ -9,6 +9,8 @@ interface ControlsProps {
   dimension: DimensionType;
   onDimensionChange: (dim: DimensionType) => void;
   onReset: () => void;
+  availableYears: number[];
+  activeYear: number | null;
 }
 
 const DIMENSIONS: { key: DimensionType; label: string }[] = [
@@ -27,6 +29,8 @@ export function Controls({
   dimension,
   onDimensionChange,
   onReset,
+  availableYears,
+  activeYear,
 }: ControlsProps) {
   const today = dayjs().format('YYYY-MM-DD');
   const todayJs = dayjs();
@@ -36,6 +40,33 @@ export function Controls({
       start: todayJs.subtract(days - 1, 'day').format('YYYY-MM-DD'),
       end: today,
     });
+  };
+
+  const handleYear = (year: number) => {
+    const dec31 = `${year}-12-31`;
+    onDateRangeChange({
+      start: `${year}-01-01`,
+      end: dec31 < today ? dec31 : today,
+    });
+  };
+
+  /// <summary>
+  /// 开始日期变更时，结束日期自动设为当月最后一天（不超过今天）
+  /// </summary>
+  const handleStartChange = (start: string) => {
+    const startDay = dayjs(start);
+    const monthEnd = startDay.endOf('month').format('YYYY-MM-DD');
+    const end = monthEnd < today ? monthEnd : today;
+    onDateRangeChange({ start, end });
+  };
+
+  /// <summary>
+  /// 结束日期变更时，不允许选在开始日期之前
+  /// </summary>
+  const handleEndChange = (end: string) => {
+    if (end >= dateRange.start) {
+      onDateRangeChange({ ...dateRange, end });
+    }
   };
 
   return (
@@ -55,20 +86,36 @@ export function Controls({
         );
       })}
 
+      {availableYears.length > 0 && (
+        <>
+          <span className={styles.yearDivider} />
+          <select
+            className={styles.yearSelect}
+            value={activeYear ?? ''}
+            onChange={(e) => {
+              const y = Number(e.target.value);
+              if (y) handleYear(y);
+            }}
+          >
+            <option value="">全年</option>
+            {availableYears.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </>
+      )}
+
       <DatePicker
         value={dateRange.start}
-        onChange={(start) =>
-          onDateRangeChange({ ...dateRange, start })
-        }
+        onChange={handleStartChange}
       />
 
       <span className={styles.separator}>至</span>
 
       <DatePicker
         value={dateRange.end}
-        onChange={(end) =>
-          onDateRangeChange({ ...dateRange, end })
-        }
+        onChange={handleEndChange}
+        minDate={dateRange.start}
       />
 
       <div className={styles.dimSwitch}>
