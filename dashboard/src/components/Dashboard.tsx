@@ -91,10 +91,10 @@ export function Dashboard() {
     [filteredSummaries]
   );
 
-  // 全部历史总时长（用于 Code Time 徽标，不随日期筛选变化）
+  // Code Time 总时长（随日期筛选/年份选择变化）
   const totalCodeTime = useMemo(
-    () => summaries.reduce((sum, s) => sum + s.grand_total.total_seconds, 0),
-    [summaries]
+    () => filteredSummaries.reduce((sum, s) => sum + s.grand_total.total_seconds, 0),
+    [filteredSummaries]
   );
   const totalCodeTimeLabel = useMemo(
     () => secondsToBadgeLabel(totalCodeTime),
