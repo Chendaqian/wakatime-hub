@@ -54,46 +54,23 @@ export async function fetchGistFiles(
 
 /**
  * 从 Gist API 返回的文件列表中直接解析 summary
- * 如果 content 为空（Gist 被截断），则回退到 raw_url 下载（带重试和间隔）
+ * 仅解析 API content 字段，不额外回退 raw_url 下载
  */
 export async function fetchSummariesFromGistFiles(
   files: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>
 ): Promise<DailySummary[]> {
   const results: DailySummary[] = [];
 
-  // 先尝试从 content 直接解析
-  const needFetch: Array<{ rawUrl: string; date: string }> = [];
   for (const file of files) {
     if (file.content) {
       try {
         const data = JSON.parse(file.content);
         if (Array.isArray(data) && data.length > 0) {
           results.push({ date: file.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
-          continue;
         }
       } catch {}
     }
-    needFetch.push({ rawUrl: file.rawUrl, date: file.date });
-  }
-
-  // 回退：串行下载（带间隔防限频）
-  if (needFetch.length > 0) {
-    for (const f of needFetch) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const r = await axios.get(f.rawUrl);
-          const data = r.data;
-          if (Array.isArray(data) && data.length > 0) {
-            results.push({ date: f.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
-          }
-          break;
-        } catch (e: unknown) {
-          if ((e as { response?: { status?: number } }).response?.status === 403 && attempt < 2) {
-            await new Promise(r => setTimeout(r, 30000));
-          }
-        }
-      }
-    }
+    // content 为空的直接跳过（Gist API 截断的数据在前端无法获取）
   }
 
   results.sort((a, b) => a.date.localeCompare(b.date));
