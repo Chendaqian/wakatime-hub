@@ -15,20 +15,12 @@ const { WAKATIME_API_KEY, GH_TOKEN, SCU_KEY } = process.env
 function getGistIdForDate(dateStr) {
   const year = dateStr.substring(0, 4)
   try {
-    const config = JSON.parse(process.env.GIST_ID || '{}')
+    const config = JSON.parse(process.env.GIST_IDS || '{}')
     const gid = config[year]
     if (gid && typeof gid === 'string') return gid
-    // 兼容旧格式：数组取第一个
-    if (Array.isArray(gid)) return gid[0]
+    if (Array.isArray(gid)) return gid[0] // 兼容旧格式
   } catch { /* fall through */ }
-  // fallback
-  return (
-    process.env[`GIST_ID_${year}`] ||
-    (process.env.GIST_IDS
-      ? process.env.GIST_IDS.split(/[\s,;]+/).filter(Boolean)[0]
-      : null) ||
-    process.env.GIST_ID
-  )
+  return null
 }
 
 const BASE_URL = 'https://wakatime.com/api/v1'
