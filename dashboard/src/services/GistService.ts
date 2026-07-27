@@ -87,8 +87,8 @@ export async function fetchSummariesFromGistFiles(
             results.push({ date: f.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
           }
           break;
-        } catch (e) {
-          if (e.response?.status === 403 && attempt < 2) {
+        } catch (e: unknown) {
+          if ((e as { response?: { status?: number } }).response?.status === 403 && attempt < 2) {
             await new Promise(r => setTimeout(r, 30000));
           }
         }
