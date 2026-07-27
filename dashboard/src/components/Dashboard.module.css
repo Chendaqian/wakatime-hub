@@ -68,8 +68,13 @@
 }
 
 .codeTimeBadge {
-  height: 20px;
+  display: inline-flex;
   border-radius: 3px;
+
+  img {
+    height: 20px;
+    border-radius: 3px;
+  }
 }
 
 .gistBadge {

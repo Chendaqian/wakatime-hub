@@ -28,13 +28,6 @@ import { secondsToBadgeLabel, secondsToReadable } from '@/services/format';
 import type { DimensionType } from '@/types';
 import styles from './Dashboard.module.css';
 
-/**
- * 生成 shields.io Code Time 徽标 URL（按当周累计）
- */
-function getCodeTimeBadgeUrl(totalSeconds: number): string {
-  const label = secondsToBadgeLabel(totalSeconds);
-  return `https://img.shields.io/badge/Code%20Time-${encodeURIComponent(label)}-blue?style=flat`;
-}
 
 export function Dashboard() {
   const { summaries, status, error, yearGistMap, activeYear, setActiveYear, loadData, openConfig } = useGistData();
@@ -98,10 +91,18 @@ export function Dashboard() {
     [filteredSummaries]
   );
 
-  // 全部历史总时长（用于 Code Time 徽标）
+  // 全部历史总时长（用于 Code Time 徽标，不随日期筛选变化）
   const totalCodeTime = useMemo(
     () => summaries.reduce((sum, s) => sum + s.grand_total.total_seconds, 0),
     [summaries]
+  );
+  const totalCodeTimeLabel = useMemo(
+    () => secondsToBadgeLabel(totalCodeTime),
+    [totalCodeTime]
+  );
+  const codeTimeBadgeUrl = useMemo(
+    () => `https://img.shields.io/badge/Code%20Time-${encodeURIComponent(totalCodeTimeLabel)}-blue?style=flat`,
+    [totalCodeTimeLabel]
   );
 
   // 当周总时长（用于顶部徽标）
@@ -204,12 +205,18 @@ export function Dashboard() {
           </a>
           <div className={styles.badges}>
             {totalCodeTime > 0 && (
-              <img
+              <a
+                href={codeTimeBadgeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className={styles.codeTimeBadge}
-                src={getCodeTimeBadgeUrl(totalCodeTime)}
-                alt="Code Time"
-                loading="lazy"
-              />
+              >
+                <img
+                  src={codeTimeBadgeUrl}
+                  alt="Code Time"
+                  loading="lazy"
+                />
+              </a>
             )}
             <span className={styles.gistBadge} data-count={Object.keys(yearGistMap).length}>
               {Object.keys(yearGistMap).length} 个年数据源
