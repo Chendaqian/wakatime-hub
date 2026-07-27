@@ -118,11 +118,15 @@ export function Dashboard() {
   const weekLabel = useMemo(() => secondsToReadable(weekSeconds), [weekSeconds]);
 
   // 从已有数据中提取所有年份（降序），用于年份快捷选择
+  // 也要包含 yearGistMap 中已配置但尚未加载的年份
   const availableYears = useMemo(() => {
-    const years = [...new Set(summaries.map((s) => s.date.substring(0, 4)))];
-    years.sort((a, b) => Number(b) - Number(a));
-    return years.map(Number);
-  }, [summaries]);
+    const loadedYears = [...new Set(summaries.map((s) => s.date.substring(0, 4)))];
+    for (const y of Object.keys(yearGistMap)) {
+      if (!loadedYears.includes(y)) loadedYears.push(y);
+    }
+    loadedYears.sort((a, b) => Number(b) - Number(a));
+    return loadedYears.map(Number);
+  }, [summaries, yearGistMap]);
 
   // 判断当前日期范围是否匹配某个年份
   const selectedYear = useMemo(() => {
