@@ -4,7 +4,41 @@ import { fetchGistFiles, fetchSummariesFromGistFiles } from '@/services/GistServ
 
 const CACHE_KEY = 'wakatime_gist_cache';
 const GIST_IDS_KEY = 'wakatime_gist_ids';
+const GIST_IDS_TS_KEY = 'wakatime_gist_ids_ts'; // 存储时间戳
 const GIST_TOKEN_KEY = 'wakatime_gist_token';
+
+/** localStorage 过期时间：3 个月 */
+const LS_EXPIRE_MS = 3 * 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * 读取带过期时间的 localStorage 值
+ */
+function readWithExpiry<T>(key: string, tsKey: string): T | null {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  const ts = localStorage.getItem(tsKey);
+  if (ts) {
+    const elapsed = Date.now() - Number(ts);
+    if (elapsed > LS_EXPIRE_MS) {
+      localStorage.removeItem(key);
+      localStorage.removeItem(tsKey);
+      return null;
+    }
+  }
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 写入带过期时间的 localStorage 值
+ */
+function writeWithExpiry(key: string, tsKey: string, value: unknown): void {
+  localStorage.setItem(key, JSON.stringify(value));
+  localStorage.setItem(tsKey, String(Date.now()));
+}
 
 /**
  * 获取默认的 Gist ID 列表（从构建时环境变量注入）
@@ -39,16 +73,9 @@ export function useGistData(): UseGistDataReturn {
   const defaultIds = getDefaultGistIds();
 
   const [gistIds, setGistIdsState] = useState<string[]>(() => {
-    // 优先 localStorage 用户手动输入
-    const raw = localStorage.getItem(GIST_IDS_KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch {
-        // ignore parse error
-      }
-    }
+    // 优先 localStorage 用户手动输入（带 3 个月过期）
+    const cached = readWithExpiry<string[]>(GIST_IDS_KEY, GIST_IDS_TS_KEY);
+    if (cached && Array.isArray(cached) && cached.length > 0) return cached;
     // 向下兼容旧的单 Gist ID
     const oldId = localStorage.getItem('wakatime_gist_id');
     if (oldId) return [oldId];
@@ -69,7 +96,7 @@ export function useGistData(): UseGistDataReturn {
 
   const setGistIds = useCallback((ids: string[]) => {
     setGistIdsState(ids);
-    localStorage.setItem(GIST_IDS_KEY, JSON.stringify(ids));
+    writeWithExpiry(GIST_IDS_KEY, GIST_IDS_TS_KEY, ids);
   }, []);
 
   const resetConfig = useCallback(() => {
