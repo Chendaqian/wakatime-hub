@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { DailySummary, AppStatus } from '@/types';
 import { fetchGistFiles, fetchSummariesFromGistFiles } from '@/services/GistService';
+import type { GistMonthFile } from '@/services/GistService';
 
 const CACHE_KEY = 'wakatime_gist_cache';
 const GIST_IDS_KEY = 'wakatime_gist_ids';
@@ -136,12 +137,12 @@ export function useGistData(): UseGistDataReturn {
     const token = localStorage.getItem(GIST_TOKEN_KEY) || undefined;
 
     setStatus('loading');
-    let files: Array<{ filename: string; date: string; content: string | null }> = [];
+    let files: GistMonthFile[] = [];
     try {
       files = await fetchGistFiles(gistId, token);
     } catch { /* skip failed Gist */ }
 
-    const newSummaries = fetchSummariesFromGistFiles(files);
+    const newSummaries = await fetchSummariesFromGistFiles(files, token);
     if (newSummaries.length > 0) {
       setSummaries(prev => {
         const merged = [...prev, ...newSummaries];

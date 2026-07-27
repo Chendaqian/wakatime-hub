@@ -10,14 +10,20 @@ function extractMonthFromFilename(filename: string): string | null {
   return match ? match[1] : null;
 }
 
+export interface GistMonthFile {
+  filename: string;
+  rawUrl: string;
+  date: string;
+  content: string | null;
+}
+
 /**
  * 获取 Gist 文件列表，筛选 summaries_YYYY-MM.json 文件
- * 每月一个 JSON，文件数少（≤12），content 不会被截断
  */
 export async function fetchGistFiles(
   gistId: string,
   token?: string
-): Promise<Array<{ filename: string; date: string; content: string | null }>> {
+): Promise<GistMonthFile[]> {
   const headers: Record<string, string> = {};
   if (token) {
     headers.Authorization = `token ${token}`;
@@ -29,15 +35,17 @@ export async function fetchGistFiles(
   );
 
   const files = response.data.files;
-  const result: Array<{ filename: string; date: string; content: string | null }> = [];
+  const result: GistMonthFile[] = [];
 
   for (const [filename, file] of Object.entries(files)) {
     const month = extractMonthFromFilename(filename);
     if (month) {
+      const f = file as { content?: string; raw_url?: string };
       result.push({
         filename,
+        rawUrl: f.raw_url || '',
         date: month,
-        content: (file as { content?: string }).content || null,
+        content: f.content || null,
       });
     }
   }
@@ -47,18 +55,30 @@ export async function fetchGistFiles(
 }
 
 /**
- * 从月 JSON 文件直接解析 summary 数组
- * 每月文件内容是 DailySummary[]，直接 flatMap
+ * 从月 JSON 文件解析 summary 数组
+ * content 为 null 时用 token 回退 raw_url 下载
  */
-export function fetchSummariesFromGistFiles(
-  files: Array<{ filename: string; date: string; content: string | null }>
-): DailySummary[] {
+export async function fetchSummariesFromGistFiles(
+  files: GistMonthFile[],
+  token?: string
+): Promise<DailySummary[]> {
   const results: DailySummary[] = [];
 
   for (const file of files) {
-    if (file.content) {
+    let raw = file.content;
+
+    // content 为 null 时回退 raw_url（有 token 限频 5000/h，安全）
+    if (!raw && file.rawUrl && token) {
       try {
-        const data = JSON.parse(file.content);
+        const headers: Record<string, string> = { Authorization: `token ${token}` };
+        const resp = await axios.get(file.rawUrl, { headers });
+        raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+      } catch { /* skip */ }
+    }
+
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
         if (Array.isArray(data) && data.length > 0) {
           for (const item of data) {
             if (item.date && item.grand_total) {
