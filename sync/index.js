@@ -8,27 +8,27 @@ dayjs.extend(utc)
 
 const { WAKATIME_API_KEY, GH_TOKEN, SCU_KEY } = process.env
 
-// GIST_ID 是 JSON 格式: { "2026": ["H1的ID", "H2的ID"], ... }
-// 按月选半年：month ≤ 6 → [0], month ≥ 7 → [1]，只有 1 个就固定 [0]
-const now = new Date()
-const currentYear = String(now.getFullYear())
-const currentMonth = now.getMonth() + 1 // 1–12
-
-let GIST_ID
-try {
-  const config = JSON.parse(process.env.GIST_ID || '{}')
-  const ids = config[currentYear]
-  if (ids && ids.length > 0) {
-    GIST_ID = ids.length === 1 ? ids[0] : (currentMonth <= 6 ? ids[0] : ids[1])
-  }
-} catch {
-  // fallback: 旧版 GIST_ID_YYYY / GIST_IDS / GIST_ID
-  GIST_ID =
-    process.env[`GIST_ID_${currentYear}`] ||
+/**
+ * 根据日期选择对应的 Gist ID（按月分半区：≤6 月→H1, ≥7 月→H2）
+ */
+function getGistIdForDate(dateStr) {
+  const month = parseInt(dateStr.substring(5, 7), 10) // YYYY-MM-DD
+  const year = dateStr.substring(0, 4)
+  try {
+    const config = JSON.parse(process.env.GIST_ID || '{}')
+    const ids = config[year]
+    if (ids && ids.length > 0) {
+      return ids.length === 1 ? ids[0] : (month <= 6 ? ids[0] : ids[1])
+    }
+  } catch { /* fall through */ }
+  // fallback: 旧版
+  return (
+    process.env[`GIST_ID_${year}`] ||
     (process.env.GIST_IDS
       ? process.env.GIST_IDS.split(/[\s,;]+/).filter(Boolean)[0]
       : null) ||
     process.env.GIST_ID
+  )
 }
 const BASE_URL = 'https://wakatime.com/api/v1'
 const summariesApi = `${BASE_URL}/users/current/summaries`
@@ -79,9 +79,10 @@ function getMySummary(date) {
  * @param {*} content update content
  */
 async function updateGist(date, content) {
-  console.log(`[${date}] writing to Gist...`)
+  const gistId = getGistIdForDate(date)
+  console.log(`[${date}] writing to Gist ${gistId}...`)
   await octokit.gists.update({
-    gist_id: GIST_ID,
+    gist_id: gistId,
     description: 'wakatime2026',
     files: {
       [`summaries_${date}.json`]: {
@@ -130,16 +131,25 @@ async function main() {
 
   // 区间补数据（逐天串行）
   if (SYNC_START && SYNC_END) {
-    // 先拉取 Gist 中已有日期，跳过已存在的
     console.log(`Backfilling ${SYNC_START} ~ ${SYNC_END}, checking existing files...`)
     try {
-      const gist = await octokit.gists.get({ gist_id: GIST_ID })
-      const existingFiles = Object.keys(gist.data.files)
-      const existingDates = new Set(
-        existingFiles
-          .filter(f => f.startsWith('summaries_'))
-          .map(f => f.substring(10, 20))
-      )
+      // 查所有相关 Gist 中已有日期，避免重复写入
+      const existingDates = new Set()
+      const year = SYNC_START.substring(0, 4)
+      try {
+        const config = JSON.parse(process.env.GIST_ID || '{}')
+        const ids = config[year] || []
+        for (const gid of ids) {
+          try {
+            const gist = await octokit.gists.get({ gist_id: gid })
+            for (const f of Object.keys(gist.data.files)) {
+              if (f.startsWith('summaries_')) {
+                existingDates.add(f.substring(10, 20))
+              }
+            }
+          } catch { /* skip unreachable Gist */ }
+        }
+      } catch { /* skip */ }
       const dates = []
       let cur = dayjs(SYNC_START)
       const end = dayjs(SYNC_END)
