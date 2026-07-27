@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { OverviewCards } from './OverviewCards';
 import {
@@ -37,11 +37,12 @@ function getCodeTimeBadgeUrl(totalSeconds: number): string {
 }
 
 export function Dashboard() {
-  const { summaries, status, error, yearGistMap, loadData, resetConfig } = useGistData();
+  const { summaries, status, error, yearGistMap, activeYear, setActiveYear, loadData, resetConfig } = useGistData();
 
   const today = dayjs().format('YYYY-MM-DD');
+  const currentYearStart = `${dayjs().year()}-01-01`;
   const [dateRange, setDateRange] = useState({
-    start: dayjs().subtract(6, 'day').format('YYYY-MM-DD'),
+    start: currentYearStart,
     end: today,
   });
   const [dimension, setDimension] = useState<DimensionType>('projects');
@@ -142,6 +143,16 @@ export function Dashboard() {
   }, [availableYears, dateRange, today]);
 
   const isLoading = status === 'loading';
+
+  // 切换年份时自动加载对应年份的数据
+  useEffect(() => {
+    if (selectedYear !== null) {
+      const yearStr = String(selectedYear);
+      if (yearStr !== activeYear) {
+        setActiveYear(yearStr);
+      }
+    }
+  }, [selectedYear, activeYear, setActiveYear]);
 
   const handleReset = useCallback(() => {
     resetConfig();
