@@ -3,10 +3,11 @@ import { ConfigPage } from '@/components/ConfigPage';
 import { Dashboard } from '@/components/Dashboard';
 
 function AppContent() {
-  const { status, gistIds, setGistIds, defaultGistIds } = useGistData();
+  const { status, yearGistMap } = useGistData();
+  const years = Object.keys(yearGistMap);
 
-  if (status === 'config' || gistIds.length === 0) {
-    return <ConfigPage onConfirm={setGistIds} defaultGistIds={defaultGistIds} />;
+  if (status === 'config' || years.length === 0) {
+    return <ConfigPage onConfirm={() => {}} defaultGistIds={[]} />;
   }
 
   return <Dashboard />;
