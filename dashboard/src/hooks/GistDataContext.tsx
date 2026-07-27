@@ -21,13 +21,13 @@ export function GistDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const years = Object.keys(data.yearGistMap);
-    if (years.length > 0) {
-      // 默认加载当前年份
+    if (years.length > 0 && data.activeYear === null) {
+      // 默认加载当前年份（仅首次）
       const currentYear = String(new Date().getFullYear());
       const year = data.yearGistMap[currentYear] ? currentYear : years[0];
       data.setActiveYear(year);
     }
-  }, [data.yearGistMap]); // only on mount
+  }, [data.yearGistMap, data.activeYear]);
 
   return (
     <GistDataContext.Provider value={data}>{children}</GistDataContext.Provider>
