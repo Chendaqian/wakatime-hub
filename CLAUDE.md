@@ -43,7 +43,7 @@ npm run build       # 生产构建，输出到 dist/
 
 ```powershell
 # PowerShell
-$env:VITE_GIST_IDS = "802ac7121f6edc199e738fb63cd4c48d"
+$env:VITE_GIST_IDS = '{"2026":"your-gist-id"}'
 npm run dev
 ```
 
@@ -51,15 +51,15 @@ npm run dev
 
 ### sync/ 核心流程（index.js）
 
-1. 根据当前年份选择写入目标 Gist：优先 `GIST_ID_YYYY` → 否则取 `GIST_IDS` 第一个 → 兜底 `GIST_ID`
+1. 解析 `GIST_IDS` JSON 配置（格式 `{"2026":"gist_id",...}`），根据日期年份查找对应 Gist ID
 2. 以北京时间当天日期通过 WakaTime API 获取编码摘要
-3. 将数据写入对应 Gist，文件名格式 `summaries_YYYY-MM-DD.json`
+3. 将数据写入对应年份的 Gist，文件名格式 `summaries_YYYY-MM.json`（按月存储，每年 12 个文件）
 4. 可选通过 Server酱 推送微信日报
 
 ### dashboard/ 核心流程
 
-1. 配置页输入 Gist ID（支持多个，逗号/分号/换行分隔），空值使用 `VITE_GIST_IDS` 默认值
-2. `useGistData` Hook：并发拉取多 Gist 文件列表 → 按日期去重合并 → 分批拉取原始 summary
+1. 配置页输入 Gist 配置（JSON 格式 `{"2026":"gist_id",...}`），空值使用 `VITE_GIST_IDS` 默认值；私有 Gist 需填写 GitHub Token
+2. `useGistData` Hook：按年加载多 Gist 数据（每年一个 Gist，含 12 个月 JSON 文件）→ 按日期去重合并 → 分批拉取原始 summary
 3. `DataAggregator`：按日期范围筛选，按维度（项目/语言/编辑器/类别/系统）聚合
 4. `AIMetricsTransformer`：AI vs 人工代码、Token 消耗、Agent 成本
 5. 图表组件：StackedColumnChart / TrendLineChart / PieChart / ActivityHeatmap / AICodeComparison / AITokenTrend / AIAgentCost
@@ -99,20 +99,19 @@ wakatime-hub/
 |--------|------|
 | `GH_TOKEN` | GitHub Token（需要 gist scope） |
 | `WAKATIME_API_KEY` | WakaTime API Key |
-| `GIST_IDS` | 多个 Gist ID，分号/逗号分隔，第一个为写入目标 |
-| `GIST_ID_YYYY` | 按年份的 Gist ID（如 `GIST_ID_2026`），优先于 `GIST_IDS` |
-| `GIST_ID` | 旧版单 Gist ID（向下兼容） |
+| `GIST_IDS` | JSON 格式：`{"2026":"gist_id",...}`，年份 → Gist ID 映射 |
 | `SCU_KEY` | Server酱 SendKey（可选） |
 
 ### dashboard/ — GitHub Actions Variables
 
 | Variable | 说明 |
 |----------|------|
-| `GIST_IDS` | 构建时注入的默认 Gist ID，用户可在页面内覆盖 |
+| `GIST_IDS` | 同上 JSON 格式，构建时注入，用户可在页面内覆盖 |
 
 ## 注意事项
 
 - sync: 构建后 `dist/index.js` 需一并提交
-- sync: Gist 单文件超 300 条会被截断，长期使用按年拆分 `GIST_ID_YYYY`
+- sync: Gist 文件名格式为 `summaries_YYYY-MM.json`（按月），每年 12 个文件，单个 Gist 可存约 25 年
+- sync: 所有 WakaTime Gist 均为**私有**，dashboard 需要 GitHub Token 访问
 - dashboard: `VITE_GIST_IDS` 构建时固化，更新后需重新构建部署
 - dashboard: 多 Gist 数据按日期去重，同一天以最先出现的为准
