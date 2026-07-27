@@ -6,6 +6,7 @@ const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 interface DatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (date: string) => void;
+  minDate?: string; // YYYY-MM-DD，不可选择的日期下限（不含）
 }
 
 function parseDate(v: string): { y: number; m: number; d: number } {
@@ -31,7 +32,7 @@ function firstDayOfWeek(y: number, m: number): number {
   return new Date(y, m - 1, 1).getDay();
 }
 
-export function DatePicker({ value, onChange }: DatePickerProps) {
+export function DatePicker({ value, onChange, minDate }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { y, m } = parseDate(value);
@@ -61,10 +62,12 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
 
   const selectDay = useCallback(
     (day: number) => {
-      onChange(formatDate(viewYear, viewMonth, day));
+      const dateStr = formatDate(viewYear, viewMonth, day);
+      if (minDate && dateStr < minDate) return;
+      onChange(dateStr);
       setOpen(false);
     },
-    [viewYear, viewMonth, onChange]
+    [viewYear, viewMonth, onChange, minDate]
   );
 
   const prevMonth = () => {
@@ -100,13 +103,16 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
     const dateStr = formatDate(viewYear, viewMonth, day);
     const isSelected = dateStr === value;
     const isToday = dateStr === todayStr;
+    const isDisabled = minDate ? dateStr < minDate : false;
     cells.push(
       <button
         key={day}
+        disabled={isDisabled}
         className={[
           styles.dayBtn,
           isSelected ? styles.daySelected : '',
           isToday ? styles.dayToday : '',
+          isDisabled ? styles.dayDisabled : '',
         ].join(' ')}
         onClick={() => selectDay(day)}
       >
