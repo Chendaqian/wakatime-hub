@@ -60,7 +60,7 @@ export async function fetchGistFiles(
  */
 export async function fetchSummariesFromGistFiles(
   files: GistMonthFile[],
-  token?: string
+  _token?: string
 ): Promise<DailySummary[]> {
   const results: DailySummary[] = [];
 
