@@ -53,24 +53,35 @@ export async function fetchGistFiles(
 }
 
 /**
- * 从 Gist API 返回的文件列表中直接解析 summary
- * 仅解析 API content 字段，不额外回退 raw_url 下载
+ * 从 Gist API 返回的文件列表中解析 summary
+ * 优先用 API content 字段，为 null 时回退 raw_url 下载（需要 token）
  */
 export async function fetchSummariesFromGistFiles(
-  files: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>
+  files: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>,
+  token?: string
 ): Promise<DailySummary[]> {
   const results: DailySummary[] = [];
 
   for (const file of files) {
-    if (file.content) {
+    let raw = file.content;
+
+    // content 为 null 时尝试 raw_url 回退下载
+    if (!raw && file.rawUrl && token) {
       try {
-        const data = JSON.parse(file.content);
+        const headers: Record<string, string> = { Authorization: `token ${token}` };
+        const resp = await axios.get(file.rawUrl, { headers });
+        raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+      } catch { /* 下载失败跳过 */ }
+    }
+
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
         if (Array.isArray(data) && data.length > 0) {
           results.push({ date: file.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
         }
       } catch {}
     }
-    // content 为空的直接跳过（Gist API 截断的数据在前端无法获取）
   }
 
   results.sort((a, b) => a.date.localeCompare(b.date));

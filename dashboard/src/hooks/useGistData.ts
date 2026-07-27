@@ -142,7 +142,7 @@ export function useGistData(): UseGistDataReturn {
 
     const flat = allFiles.flat().filter(f => f.date.startsWith(year));
     if (flat.length > 0) {
-      const newSummaries = await fetchSummariesFromGistFiles(flat);
+      const newSummaries = await fetchSummariesFromGistFiles(flat, token);
       setSummaries(prev => {
         const merged = [...prev, ...newSummaries];
         merged.sort((a, b) => a.date.localeCompare(b.date));
