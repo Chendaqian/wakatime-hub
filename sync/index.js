@@ -7,15 +7,29 @@ const utc = require('dayjs/plugin/utc')
 dayjs.extend(utc)
 
 const { WAKATIME_API_KEY, GH_TOKEN, SCU_KEY } = process.env
-// 按年份取对应的 Gist ID（Secrets 里配 GIST_ID_2026、GIST_ID_2027 ...）
-// 如果没配，取 GIST_IDS（空格/逗号/分号分隔），取第一个为当前写入目标
-const currentYear = new Date().getFullYear()
-const GIST_ID =
-  process.env[`GIST_ID_${currentYear}`] ||
-  (process.env.GIST_IDS
-    ? process.env.GIST_IDS.split(/[\s,;]+/).filter(Boolean)[0]
-    : null) ||
-  process.env.GIST_ID // 旧版兼容
+
+// GIST_ID 是 JSON 格式: { "2026": ["H1的ID", "H2的ID"], ... }
+// 按月选半年：month ≤ 6 → [0], month ≥ 7 → [1]，只有 1 个就固定 [0]
+const now = new Date()
+const currentYear = String(now.getFullYear())
+const currentMonth = now.getMonth() + 1 // 1–12
+
+let GIST_ID
+try {
+  const config = JSON.parse(process.env.GIST_ID || '{}')
+  const ids = config[currentYear]
+  if (ids && ids.length > 0) {
+    GIST_ID = ids.length === 1 ? ids[0] : (currentMonth <= 6 ? ids[0] : ids[1])
+  }
+} catch {
+  // fallback: 旧版 GIST_ID_YYYY / GIST_IDS / GIST_ID
+  GIST_ID =
+    process.env[`GIST_ID_${currentYear}`] ||
+    (process.env.GIST_IDS
+      ? process.env.GIST_IDS.split(/[\s,;]+/).filter(Boolean)[0]
+      : null) ||
+    process.env.GIST_ID
+}
 const BASE_URL = 'https://wakatime.com/api/v1'
 const summariesApi = `${BASE_URL}/users/current/summaries`
 const scuPushApi = `https://sctapi.ftqq.com`
