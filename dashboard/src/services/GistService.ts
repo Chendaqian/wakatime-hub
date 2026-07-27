@@ -67,11 +67,10 @@ export async function fetchSummariesFromGistFiles(
   for (const file of files) {
     let raw = file.content;
 
-    // content 为 null 时回退 raw_url（有 token 限频 5000/h，安全）
-    if (!raw && file.rawUrl && token) {
+    // content 为 null 时回退 raw_url（公开 Gist 无需认证，避免 CORS 预检）
+    if (!raw && file.rawUrl) {
       try {
-        const headers: Record<string, string> = { Authorization: `token ${token}` };
-        const resp = await axios.get(file.rawUrl, { headers });
+        const resp = await axios.get(file.rawUrl);
         raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
       } catch { /* skip */ }
     }
