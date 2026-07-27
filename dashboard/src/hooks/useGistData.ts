@@ -56,6 +56,10 @@ export interface UseGistDataReturn {
   loadData: () => Promise<void>;
   resetConfig: () => void;
   defaultYearGistMap: Record<string, string[]>;
+  showConfig: boolean;
+  openConfig: () => void;
+  closeConfig: () => void;
+  saveConfig: (json: string, token?: string) => void;
 }
 
 export function useGistData(): UseGistDataReturn {
@@ -77,6 +81,30 @@ export function useGistData(): UseGistDataReturn {
   );
   const [error, setError] = useState<string | null>(null);
   const [activeYear, setActiveYearState] = useState<string | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
+
+  const openConfig = useCallback(() => setShowConfig(true), []);
+  const closeConfig = useCallback(() => setShowConfig(false), []);
+
+  /** 保存新配置（JSON 格式的 Gist ID + 可选 Token） */
+  const saveConfig = useCallback((json: string, token?: string) => {
+    const map = parseGistIds(json);
+    if (Object.keys(map).length === 0) return; // 无效输入不保存
+    writeWithExpiry(GIST_IDS_KEY, GIST_IDS_TS_KEY, map);
+    if (token) {
+      localStorage.setItem(GIST_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(GIST_TOKEN_KEY);
+    }
+    setYearGistMapState(map);
+    loadedYearsRef.current = new Set();
+    setLoadedYears(new Set());
+    setSummaries([]);
+    setStatus('loading');
+    setError(null);
+    setActiveYearState(null);
+    setShowConfig(false);
+  }, []);
 
   const resetConfig = useCallback(() => {
     localStorage.removeItem(GIST_IDS_KEY);
@@ -161,6 +189,10 @@ export function useGistData(): UseGistDataReturn {
     loadData,
     resetConfig,
     defaultYearGistMap: defaultMap,
+    showConfig,
+    openConfig,
+    closeConfig,
+    saveConfig,
   };
 }
 

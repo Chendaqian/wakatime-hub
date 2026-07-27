@@ -1,40 +1,45 @@
 import { useState, type FormEvent } from 'react';
 import styles from './ConfigPage.module.css';
-import { saveGistToken } from '@/hooks/useGistData';
 
 interface ConfigPageProps {
-  onConfirm: (gistIds: string[]) => void;
-  defaultGistIds?: string[];
+  /** 当前的 yearGistMap JSON 字符串（预填） */
+  defaultJson: string;
+  /** 当前已保存的 token（预填） */
+  defaultToken: string;
+  onSave: (json: string, token?: string) => void;
+  onCancel: () => void;
 }
 
-export function ConfigPage({ onConfirm, defaultGistIds }: ConfigPageProps) {
-  const defaultText = defaultGistIds?.length ? defaultGistIds.join(';\n') : '';
-  const [inputValue, setInputValue] = useState(defaultText);
-  const [tokenValue, setTokenValue] = useState('');
+export function ConfigPage({ defaultJson, defaultToken, onSave, onCancel }: ConfigPageProps) {
+  const [jsonValue, setJsonValue] = useState(defaultJson);
+  const [tokenValue, setTokenValue] = useState(defaultToken);
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = inputValue.trim();
+    const trimmed = jsonValue.trim();
     if (!trimmed) return;
 
-    if (tokenValue.trim()) {
-      saveGistToken(tokenValue.trim());
+    // 校验 JSON
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+        setError('格式错误：应为 {"年份": ["GistID", ...]} 的对象');
+        return;
+      }
+      for (const [year, ids] of Object.entries(parsed)) {
+        if (!Array.isArray(ids) || ids.some((id: unknown) => typeof id !== 'string')) {
+          setError(`年份 ${year} 的值必须是字符串数组`);
+          return;
+        }
+      }
+    } catch {
+      setError('JSON 解析失败，请检查格式');
+      return;
     }
 
-    // 支持用逗号、换行、空格分隔多个 Gist ID
-    const ids = trimmed
-      .split(/[\n,;\s]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    onConfirm(ids);
-  };
-
-  const handleSkip = () => {
-    // 直接用默认值（如果存在）
-    if (defaultGistIds?.length) {
-      onConfirm(defaultGistIds);
-    }
+    setError('');
+    onSave(trimmed, tokenValue.trim() || undefined);
   };
 
   return (
@@ -42,39 +47,26 @@ export function ConfigPage({ onConfirm, defaultGistIds }: ConfigPageProps) {
       <div className={styles.container}>
         <div className={styles.logo}>
           <h1>📊 WakaTime Hub</h1>
-          <p>输入 GitHub Gist ID 来查看编码数据看板</p>
+          <p>配置 Gist 数据源和 GitHub Token</p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.field}>
-            <label htmlFor="gistId">Gist ID（支持多个）*</label>
+            <label htmlFor="gistJson">Gist ID 配置（JSON 格式）</label>
             <textarea
-              id="gistId"
-              rows={4}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={`802ac7121f6edc199e738fb63cd4c48d; e4f5678901234567890abcdef1234567890ab`}
+              id="gistJson"
+              rows={10}
+              value={jsonValue}
+              onChange={(e) => { setJsonValue(e.target.value); setError(''); }}
               autoFocus
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                border: '1px solid #334155',
-                borderRadius: '8px',
-                background: '#0f172a',
-                color: '#f1f5f9',
-                fontSize: '0.938rem',
-                outline: 'none',
-                resize: 'vertical',
-                fontFamily: 'monospace',
-              }}
             />
             <p className={styles.hint}>
-              多个 Gist ID 用逗号、分号或换行分隔（如按年份分别存储的 Gist，可一次性输入所有年份的 ID）
+              格式：{`{"年份": ["GistID1", "GistID2"], ...}`}。每年至多 2 个（H1/H2），上半年写第 1 个、下半年写第 2 个
             </p>
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="token">GitHub Token（可选）</label>
+            <label htmlFor="token">GitHub Token（可选，提高 API 频率限制）</label>
             <input
               id="token"
               type="password"
@@ -83,41 +75,20 @@ export function ConfigPage({ onConfirm, defaultGistIds }: ConfigPageProps) {
               placeholder="ghp_xxxxxxxxxxxx"
             />
             <p className={styles.hint}>
-              公开 Gist 无需 Token。添加 Token 可提高 API 速率限制（60→5000 次/小时）
+              未认证 60 次/小时，认证后 5000 次/小时。Token 仅保存在浏览器 localStorage
             </p>
           </div>
 
-          <button
-            type="submit"
-            className={styles.submitBtn}
-            disabled={!inputValue.trim()}
-          >
+          {error && <p className={styles.error}>{error}</p>}
+
+          <button type="submit" className={styles.submitBtn} disabled={!jsonValue.trim()}>
             确认并进入看板
           </button>
 
-          {defaultGistIds && defaultGistIds.length > 0 && (
-            <button
-              type="button"
-              className={styles.submitBtn}
-              style={{ marginTop: '0.5rem', background: '#334155' }}
-              onClick={handleSkip}
-            >
-              使用默认配置直接进入
-            </button>
-          )}
+          <button type="button" className={styles.cancelBtn} onClick={onCancel} disabled={!onCancel}>
+            取消
+          </button>
         </form>
-
-        <div className={styles.demoHint}>
-          还没有 Gist？用{' '}
-          <a
-            href="https://github.com/Chendaqian/wakatime-hub"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            wakatime-hub
-          </a>{' '}
-          自动同步 WakaTime 数据到 Gist
-        </div>
       </div>
     </div>
   );

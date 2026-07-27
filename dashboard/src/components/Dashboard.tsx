@@ -37,7 +37,7 @@ function getCodeTimeBadgeUrl(totalSeconds: number): string {
 }
 
 export function Dashboard() {
-  const { summaries, status, error, yearGistMap, activeYear, setActiveYear, loadData, resetConfig } = useGistData();
+  const { summaries, status, error, yearGistMap, activeYear, setActiveYear, loadData, openConfig } = useGistData();
 
   const today = dayjs().format('YYYY-MM-DD');
   const currentYearStart = `${dayjs().year()}-01-01`;
@@ -155,8 +155,8 @@ export function Dashboard() {
   }, [selectedYear, activeYear, setActiveYear]);
 
   const handleReset = useCallback(() => {
-    resetConfig();
-  }, [resetConfig]);
+    openConfig();
+  }, [openConfig]);
 
   // 错误状态
   if (status === 'error') {

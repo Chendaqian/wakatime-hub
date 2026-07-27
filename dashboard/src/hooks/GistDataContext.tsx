@@ -12,6 +12,10 @@ interface GistDataContextValue {
   setActiveYear: (year: string) => void;
   loadData: () => Promise<void>;
   resetConfig: () => void;
+  showConfig: boolean;
+  openConfig: () => void;
+  closeConfig: () => void;
+  saveConfig: (json: string, token?: string) => void;
 }
 
 const GistDataContext = createContext<GistDataContextValue | null>(null);
