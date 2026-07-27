@@ -1,84 +1,70 @@
 import axios from 'axios';
-import type { GistResponse, DailySummary, WakaTimeSummary } from '@/types';
-
-const GIST_API_BASE = 'https://api.github.com';
+import type { DailySummary } from '@/types';
 
 /**
- * 从文件名提取日期
- * 格式: summaries_2026-07-21.json -> 2026-07-21
+ * 从文件名提取月份
+ * 格式: summaries_2026-07.json -> 2026-07
  */
-function extractDateFromFilename(filename: string): string | null {
-  const match = filename.match(/summaries_(\d{4}-\d{2}-\d{2})\.json/);
+function extractMonthFromFilename(filename: string): string | null {
+  const match = filename.match(/summaries_(\d{4}-\d{2})\.json/);
   return match ? match[1] : null;
 }
 
 /**
- * 获取 Gist 文件列表，筛选出 summaries_*.json 文件
- * 返回 content（从 Gist API 直接获取，避免逐个下载 raw_url 触发限频）
+ * 获取 Gist 文件列表，筛选 summaries_YYYY-MM.json 文件
+ * 每月一个 JSON，文件数少（≤12），content 不会被截断
  */
 export async function fetchGistFiles(
   gistId: string,
   token?: string
-): Promise<Array<{ filename: string; rawUrl: string; date: string; content: string | null }>> {
+): Promise<Array<{ filename: string; date: string; content: string | null }>> {
   const headers: Record<string, string> = {};
   if (token) {
     headers.Authorization = `token ${token}`;
   }
 
-  const response = await axios.get<GistResponse>(
-    `${GIST_API_BASE}/gists/${gistId}?_=${Date.now()}`,
+  const response = await axios.get(
+    `https://api.github.com/gists/${gistId}?_=${Date.now()}`,
     { headers }
   );
 
   const files = response.data.files;
-  const summaryFiles: Array<{ filename: string; rawUrl: string; date: string; content: string | null }> = [];
+  const result: Array<{ filename: string; date: string; content: string | null }> = [];
 
   for (const [filename, file] of Object.entries(files)) {
-    const date = extractDateFromFilename(filename);
-    if (date) {
-      summaryFiles.push({
+    const month = extractMonthFromFilename(filename);
+    if (month) {
+      result.push({
         filename,
-        rawUrl: file.raw_url || '',
-        date,
-        // Gist API 自带文件内容（未截断时），省去逐个下载
-        content: file.content || null,
+        date: month,
+        content: (file as { content?: string }).content || null,
       });
     }
   }
 
-  // 按日期降序排列（最新在前）
-  summaryFiles.sort((a, b) => b.date.localeCompare(a.date));
-
-  return summaryFiles;
+  result.sort((a, b) => a.date.localeCompare(b.date));
+  return result;
 }
 
 /**
- * 从 Gist API 返回的文件列表中解析 summary
- * 优先用 API content 字段，为 null 时回退 raw_url 下载（需要 token）
+ * 从月 JSON 文件直接解析 summary 数组
+ * 每月文件内容是 DailySummary[]，直接 flatMap
  */
-export async function fetchSummariesFromGistFiles(
-  files: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>,
-  token?: string
-): Promise<DailySummary[]> {
+export function fetchSummariesFromGistFiles(
+  files: Array<{ filename: string; date: string; content: string | null }>
+): DailySummary[] {
   const results: DailySummary[] = [];
 
   for (const file of files) {
-    let raw = file.content;
-
-    // content 为 null 时尝试 raw_url 回退下载
-    if (!raw && file.rawUrl && token) {
+    if (file.content) {
       try {
-        const headers: Record<string, string> = { Authorization: `token ${token}` };
-        const resp = await axios.get(file.rawUrl, { headers });
-        raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
-      } catch { /* 下载失败跳过 */ }
-    }
-
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
+        const data = JSON.parse(file.content);
         if (Array.isArray(data) && data.length > 0) {
-          results.push({ date: file.date, ...(data[0] as WakaTimeSummary) } as DailySummary);
+          for (const item of data) {
+            if (item.date && item.grand_total) {
+              results.push(item as DailySummary);
+            }
+          }
         }
       } catch {}
     }

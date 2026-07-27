@@ -29,33 +29,40 @@ function writeWithExpiry(key: string, tsKey: string, value: unknown): void {
   localStorage.setItem(tsKey, String(Date.now()));
 }
 
-// kept for future use
-void writeWithExpiry;
-
 /**
- * 解析 VITE_GIST_IDS：支持 JSON 和旧版分号分隔
+ * 解析 Gist 配置 JSON
+ * 新格式: { "2026": "gist_id", ... } → 每年一个 Gist
+ * 兼容旧格式: { "2026": ["h1", "h2"] } → 取第一个
  */
-function parseGistIds(raw: string): Record<string, string[]> {
+function parseGistIds(raw: string): Record<string, string> {
   if (!raw) return {};
   if (raw.trim().startsWith('{')) {
-    try { return JSON.parse(raw) as Record<string, string[]>; } catch { /* fall through */ }
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const result: Record<string, string> = {};
+      for (const [key, val] of Object.entries(parsed)) {
+        if (typeof val === 'string') result[key] = val;
+        else if (Array.isArray(val) && val.length > 0) result[key] = String(val[0]);
+      }
+      return result;
+    } catch { /* fall through */ }
   }
-  // 旧版：分号分隔，全部归入 2020（兼容旧行为，实际上不会被用到）
+  // 旧版分号分隔 → 全归 2020
   const ids = raw.split(/[\n,;\s]+/).map(s => s.trim()).filter(Boolean);
-  return ids.length > 0 ? { '2020': ids } : {};
+  return ids.length > 0 ? { '2020': ids[0] } : {};
 }
 
 export interface UseGistDataReturn {
   summaries: DailySummary[];
   status: AppStatus;
   error: string | null;
-  yearGistMap: Record<string, string[]>;   // 年份 → Gist ID[]
-  loadedYears: Set<string>;               // 已加载的年份
-  activeYear: string | null;              // 当前年中份
-  setActiveYear: (year: string) => void;  // 切换年份
+  yearGistMap: Record<string, string>;     // 年份 → Gist ID
+  loadedYears: Set<string>;
+  activeYear: string | null;
+  setActiveYear: (year: string) => void;
   loadData: () => Promise<void>;
   resetConfig: () => void;
-  defaultYearGistMap: Record<string, string[]>;
+  defaultYearGistMap: Record<string, string>;
   showConfig: boolean;
   openConfig: () => void;
   closeConfig: () => void;
@@ -66,9 +73,8 @@ export function useGistData(): UseGistDataReturn {
   const raw = import.meta.env.VITE_GIST_IDS;
   const defaultMap = parseGistIds(raw);
 
-  // localStorage 用户输入优先
-  const [yearGistMap, setYearGistMapState] = useState<Record<string, string[]>>(() => {
-    const cached = readWithExpiry<Record<string, string[]>>(GIST_IDS_KEY, GIST_IDS_TS_KEY);
+  const [yearGistMap, setYearGistMapState] = useState<Record<string, string>>(() => {
+    const cached = readWithExpiry<Record<string, string>>(GIST_IDS_KEY, GIST_IDS_TS_KEY);
     if (cached && Object.keys(cached).length > 0) return cached;
     return defaultMap;
   });
@@ -86,10 +92,9 @@ export function useGistData(): UseGistDataReturn {
   const openConfig = useCallback(() => setShowConfig(true), []);
   const closeConfig = useCallback(() => setShowConfig(false), []);
 
-  /** 保存新配置（JSON 格式的 Gist ID + 可选 Token） */
   const saveConfig = useCallback((json: string, token?: string) => {
     const map = parseGistIds(json);
-    if (Object.keys(map).length === 0) return; // 无效输入不保存
+    if (Object.keys(map).length === 0) return;
     writeWithExpiry(GIST_IDS_KEY, GIST_IDS_TS_KEY, map);
     if (token) {
       localStorage.setItem(GIST_TOKEN_KEY, token);
@@ -123,26 +128,21 @@ export function useGistData(): UseGistDataReturn {
     setActiveYearState(null);
   }, [defaultMap]);
 
-  /** 加载指定年份的数据 */
-  const loadYear = useCallback(async (year: string, map: Record<string, string[]>) => {
-    const ids = map[year];
-    if (!ids || ids.length === 0) return;
+  /** 加载指定年份的数据（每年一个 Gist，含 12 个 JSON 月文件） */
+  const loadYear = useCallback(async (year: string, map: Record<string, string>) => {
+    const gistId = map[year];
+    if (!gistId) return;
 
     const token = localStorage.getItem(GIST_TOKEN_KEY) || undefined;
 
-    const allFiles: Array<{ filename: string; rawUrl: string; date: string; content: string | null }>[] = [];
-    for (let i = 0; i < ids.length; i++) {
-      setStatus('loading');
-      try {
-        const files = await fetchGistFiles(ids[i], token);
-        allFiles.push(files);
-      } catch { /* skip failed Gist */ }
-      if (i < ids.length - 1) await new Promise(r => setTimeout(r, 8000));
-    }
+    setStatus('loading');
+    let files: Array<{ filename: string; date: string; content: string | null }> = [];
+    try {
+      files = await fetchGistFiles(gistId, token);
+    } catch { /* skip failed Gist */ }
 
-    const flat = allFiles.flat().filter(f => f.date.startsWith(year));
-    if (flat.length > 0) {
-      const newSummaries = await fetchSummariesFromGistFiles(flat, token);
+    const newSummaries = fetchSummariesFromGistFiles(files);
+    if (newSummaries.length > 0) {
       setSummaries(prev => {
         const merged = [...prev, ...newSummaries];
         merged.sort((a, b) => a.date.localeCompare(b.date));
@@ -170,7 +170,6 @@ export function useGistData(): UseGistDataReturn {
     });
   }, [yearGistMap, loadYear]);
 
-  /** 全量加载（保留给旧调用方） */
   const loadData = useCallback(async () => {
     const years = Object.keys(yearGistMap).sort((a, b) => Number(b) - Number(a));
     const first = years[0];

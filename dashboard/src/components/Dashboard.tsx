@@ -40,9 +40,8 @@ export function Dashboard() {
   const { summaries, status, error, yearGistMap, activeYear, setActiveYear, loadData, openConfig } = useGistData();
 
   const today = dayjs().format('YYYY-MM-DD');
-  const currentYearStart = `${dayjs().year()}-01-01`;
   const [dateRange, setDateRange] = useState({
-    start: currentYearStart,
+    start: dayjs().subtract(6, 'day').format('YYYY-MM-DD'),
     end: today,
   });
   const [dimension, setDimension] = useState<DimensionType>('projects');

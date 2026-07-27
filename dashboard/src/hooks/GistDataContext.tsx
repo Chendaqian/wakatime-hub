@@ -6,7 +6,7 @@ interface GistDataContextValue {
   summaries: DailySummary[];
   status: AppStatus;
   error: string | null;
-  yearGistMap: Record<string, string[]>;
+  yearGistMap: Record<string, string>;
   loadedYears: Set<string>;
   activeYear: string | null;
   setActiveYear: (year: string) => void;
