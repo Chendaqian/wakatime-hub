@@ -71,24 +71,17 @@ async function updateGist(date, content) {
 
   console.log(`[${date}] writing to ${gistId}/${fileName}...`)
 
-  // 1. 读取当前月 JSON（content 为 null 时回退 raw_url 下载）
+  // 1. 读取当前月 JSON（通过 raw_url，避免 >1MB 时 content 截断）
   let monthData = []
   try {
     const gist = await octokit.gists.get({ gist_id: gistId })
     const file = gist.data.files[fileName]
-    if (file) {
-      let raw = file.content
-      // 文件 >1MB 时 content 为 null，通过 raw_url 下载
-      if (!raw && file.raw_url) {
-        console.log(`[${date}] content truncated, downloading via raw_url...`)
-        const resp = await Axios.get(file.raw_url, {
-          headers: { Authorization: `token ${GH_TOKEN}` }
-        })
-        raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data)
-      }
-      if (raw) {
-        monthData = JSON.parse(raw)
-      }
+    if (file?.raw_url) {
+      const resp = await Axios.get(file.raw_url, {
+        headers: { Authorization: `token ${GH_TOKEN}` }
+      })
+      const raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data)
+      monthData = JSON.parse(raw)
     }
   } catch (err) {
     console.error(`[${date}] read existing failed: ${err.message}, starting fresh`)
