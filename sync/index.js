@@ -71,16 +71,27 @@ async function updateGist(date, content) {
 
   console.log(`[${date}] writing to ${gistId}/${fileName}...`)
 
-  // 1. 读取当前月 JSON
+  // 1. 读取当前月 JSON（content 为 null 时回退 raw_url 下载）
   let monthData = []
   try {
     const gist = await octokit.gists.get({ gist_id: gistId })
     const file = gist.data.files[fileName]
-    if (file && file.content) {
-      monthData = JSON.parse(file.content)
+    if (file) {
+      let raw = file.content
+      // 文件 >1MB 时 content 为 null，通过 raw_url 下载
+      if (!raw && file.raw_url) {
+        console.log(`[${date}] content truncated, downloading via raw_url...`)
+        const resp = await Axios.get(file.raw_url, {
+          headers: { Authorization: `token ${GH_TOKEN}` }
+        })
+        raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data)
+      }
+      if (raw) {
+        monthData = JSON.parse(raw)
+      }
     }
   } catch (err) {
-    console.log(`[${date}] read existing failed: ${err.message}, starting fresh`)
+    console.error(`[${date}] read existing failed: ${err.message}, starting fresh`)
   }
 
   // 2. 追加当天数据（去重：覆盖同一天）
@@ -88,8 +99,13 @@ async function updateGist(date, content) {
   for (const entry of monthData) {
     if (entry.date) map.set(entry.date, entry)
   }
-  const newEntry = { date, ...content[0] }
-  map.set(date, newEntry)
+  if (content && content.length > 0) {
+    const newEntry = { date, ...content[0] }
+    map.set(date, newEntry)
+  } else {
+    console.log(`[${date}] no data from WakaTime, skipping write`)
+    return
+  }
 
   // 3. 排序写回
   const merged = [...map.values()].sort((a, b) => a.date.localeCompare(b.date))
@@ -105,10 +121,18 @@ async function updateGist(date, content) {
  * 推送消息到 Server酱
  */
 async function sendMessageToWechat(text, desp) {
-  if (typeof SCU_KEY !== 'undefined') {
-    return Axios.get(`${scuPushApi}/${SCU_KEY}.send`, {
-      params: { text, desp }
-    }).then(response => response.data)
+  if (typeof SCU_KEY !== 'undefined' && SCU_KEY) {
+    try {
+      const resp = await Axios.get(`${scuPushApi}/${SCU_KEY}.send`, {
+        params: { text, desp }
+      })
+      console.log(`[push] Server酱 response: ${JSON.stringify(resp.data)}`)
+      return resp.data
+    } catch (err) {
+      console.error(`[push] Server酱 failed: ${err.message}`)
+    }
+  } else {
+    console.log('[push] SCU_KEY not set, skipping')
   }
 }
 
@@ -166,7 +190,10 @@ async function main() {
   const today = dayjs().utcOffset(8).format('YYYY-MM-DD')
   try {
     await doSync(today)
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.error(`[${today}] sync failed: ${err.message}`)
+    process.exit(1)
+  }
 }
 
 /**
