@@ -151,16 +151,13 @@ body {
   }
 
   .dimSwitch,
-  .gistBadge,
-  .weekStat {
+  .gistBadge {
     background: var(--color-surface-strong);
     border-color: var(--color-border-subtle);
   }
 
   .gistBadge,
   .githubLink,
-  .weekLabel,
-  .weekValue,
   .dimBtn {
     color: var(--color-text-muted);
   }

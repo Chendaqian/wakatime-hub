@@ -125,6 +125,19 @@
   letter-spacing: -0.02em;
 }
 
+:global(:root[data-theme='light']) .weekStat {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+:global(:root[data-theme='light']) .weekLabel {
+  color: #4338ca;
+}
+
+:global(:root[data-theme='light']) .weekValue {
+  color: #312e81;
+}
+
 /* ===== Content ===== */
 .content {
   max-width: 1400px;
