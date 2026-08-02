@@ -18,11 +18,43 @@ html {
   text-rendering: optimizeLegibility;
 }
 
+:root {
+  --color-page: #09090b;
+  --color-surface: #18181b;
+  --color-surface-strong: #27272a;
+  --color-surface-translucent: rgba(24, 24, 27, 0.72);
+  --color-border-subtle: #27272a;
+  --color-border-strong: #3f3f46;
+  --color-text: #fafafa;
+  --color-text-primary: #d4d4d8;
+  --color-text-muted: #a1a1aa;
+  --color-text-subtle: #71717a;
+  --color-text-faint: #52525b;
+  --color-chart-grid: rgba(39, 39, 42, 0.6);
+  --radius-control: 8px;
+  --transition-fast: 150ms ease;
+}
+
+:root[data-theme='light'] {
+  --color-page: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-surface-strong: #f4f4f5;
+  --color-surface-translucent: rgba(255, 255, 255, 0.78);
+  --color-border-subtle: #e4e4e7;
+  --color-border-strong: #d4d4d8;
+  --color-text: #18181b;
+  --color-text-primary: #3f3f46;
+  --color-text-muted: #52525b;
+  --color-text-subtle: #71717a;
+  --color-text-faint: #a1a1aa;
+  --color-chart-grid: rgba(212, 212, 216, 0.72);
+}
+
 body {
   margin: 0;
   padding: 0;
-  background: #09090b;
-  color: #d4d4d8;
+  background: var(--color-page);
+  color: var(--color-text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 0.875rem;
   line-height: 1.6;
@@ -42,15 +74,101 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--color-border-subtle);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: var(--color-border-strong);
 }
 
 /* Selection */
 ::selection {
   background: rgba(99, 102, 241, 0.3);
   color: #fafafa;
+}
+
+:root[data-theme='light'] {
+  .dashboardContainer,
+  .configPage {
+    background: var(--color-page);
+    color: var(--color-text-primary);
+  }
+
+  .chartCard,
+  .card,
+  .popover,
+  .container,
+  .presetBtn,
+  .yearSelect,
+  .dimSwitch,
+  .trigger {
+    background: var(--color-surface);
+    border-color: var(--color-border-subtle);
+  }
+
+  .chartCard,
+  .card,
+  .container,
+  .popover {
+    box-shadow: 0 8px 24px rgba(24, 24, 27, 0.06);
+  }
+
+  .chartCard [class*='title'],
+  .card [class*='value'],
+  .container h1,
+  .header h1,
+  .aiSectionTitle {
+    color: var(--color-text);
+  }
+
+  .chartCard [class*='emptyText'],
+  .card [class*='label'],
+  .card [class*='subValue'],
+  .container [class*='hint'],
+  .container [class*='logo'] p,
+  .presetBtn,
+  .yearSelect,
+  .trigger,
+  .navBtn,
+  .navTitle,
+  .dayBtn,
+  .field label {
+    color: var(--color-text-muted);
+  }
+
+  .field input,
+  .field textarea,
+  .yearInput {
+    background: var(--color-surface-strong);
+    border-color: var(--color-border-subtle);
+    color: var(--color-text);
+  }
+
+  .yearDivider,
+  .separator,
+  .dimBtn + .dimBtn {
+    border-color: var(--color-border-subtle);
+  }
+
+  .dimSwitch,
+  .gistBadge,
+  .weekStat {
+    background: var(--color-surface-strong);
+    border-color: var(--color-border-subtle);
+  }
+
+  .gistBadge,
+  .githubLink,
+  .weekLabel,
+  .weekValue,
+  .dimBtn {
+    color: var(--color-text-muted);
+  }
+
+  .dayBtn:hover,
+  .navTitle span:hover,
+  .githubLink:hover {
+    background: var(--color-surface-strong);
+    color: var(--color-text);
+  }
 }

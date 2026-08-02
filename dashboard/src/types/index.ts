@@ -32,6 +32,9 @@ export interface GrandTotal {
   ai_agent_costs: Record<string, number>
   ai_agent_breakdown: AIAgentBreakdown[]
   ai_agent_total_cost: number
+  ai_model_costs: Record<string, number>
+  ai_model_breakdown: AIAgentBreakdown[]
+  ai_model_total_cost: number
   ai_prompt_length_avg: number
   ai_prompt_events_avg_per_session: number
   ai_prompt_events_median_per_session: number
@@ -83,6 +86,9 @@ export interface Project extends DimensionItem {
   ai_agent_costs: Record<string, number>
   ai_agent_breakdown: AIAgentBreakdown[]
   ai_agent_total_cost: number
+  ai_model_costs: Record<string, number>
+  ai_model_breakdown: AIAgentBreakdown[]
+  ai_model_total_cost: number
   ai_prompt_length_avg: number
   ai_prompt_length_avg_per_session: number
   ai_prompt_length_median_per_session: number
@@ -116,6 +122,9 @@ export interface Editor extends DimensionItem {
   ai_agent_costs: Record<string, number>
   ai_agent_breakdown: AIAgentBreakdown[]
   ai_agent_total_cost: number
+  ai_model_costs: Record<string, number>
+  ai_model_breakdown: AIAgentBreakdown[]
+  ai_model_total_cost: number
   ai_prompt_length_avg: number
   ai_prompt_length_avg_per_session: number
   ai_prompt_length_median_per_session: number

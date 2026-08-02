@@ -12,6 +12,7 @@ import {
 } from './ChartComponents';
 import { Controls } from './Controls';
 import { useGistData } from '@/hooks/GistDataContext';
+import { ThemeToggle } from './ThemeToggle';
 import {
   filterByDateRange,
   transformToStackedChart,
@@ -228,6 +229,7 @@ export function Dashboard() {
             <span className={styles.weekLabel}>本周</span>
             <span className={styles.weekValue}>{weekLabel}</span>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

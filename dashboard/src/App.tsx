@@ -1,4 +1,5 @@
 import { GistDataProvider, useGistData } from '@/hooks/GistDataContext';
+import { ThemeProvider } from '@/hooks/ThemeContext';
 import { Dashboard } from '@/components/Dashboard';
 import { ConfigPage } from '@/components/ConfigPage';
 import { getGistToken } from '@/hooks/useGistData';
@@ -31,9 +32,11 @@ function AppContent() {
 
 function App() {
   return (
-    <GistDataProvider>
-      <AppContent />
-    </GistDataProvider>
+    <ThemeProvider>
+      <GistDataProvider>
+        <AppContent />
+      </GistDataProvider>
+    </ThemeProvider>
   );
 }
 

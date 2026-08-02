@@ -23,13 +23,13 @@ export function ConfigPage({ defaultJson, defaultToken, onSave, onCancel }: Conf
     // 校验 JSON
     try {
       const parsed = JSON.parse(trimmed);
-      if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-        setError('格式错误：应为 {"年份": ["GistID", ...]} 的对象');
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        setError('格式错误：应为 {"年份": "GistID", ...} 的对象');
         return;
       }
-      for (const [year, ids] of Object.entries(parsed)) {
-        if (!Array.isArray(ids) || ids.some((id: unknown) => typeof id !== 'string')) {
-          setError(`年份 ${year} 的值必须是字符串数组`);
+      for (const [year, id] of Object.entries(parsed)) {
+        if (typeof id !== 'string' || !id.trim()) {
+          setError(`年份 ${year} 的值必须是非空字符串`);
           return;
         }
       }
@@ -61,7 +61,7 @@ export function ConfigPage({ defaultJson, defaultToken, onSave, onCancel }: Conf
               autoFocus
             />
             <p className={styles.hint}>
-              格式：{`{"年份": ["GistID1", "GistID2"], ...}`}。每年至多 2 个（H1/H2），上半年写第 1 个、下半年写第 2 个
+              格式：{`{"年份": "GistID", ...}`}。每个年份对应一个 Gist ID
             </p>
           </div>
 

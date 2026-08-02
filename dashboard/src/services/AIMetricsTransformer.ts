@@ -36,7 +36,7 @@ export function extractAIAgentCost(summaries: DailySummary[]): AIAgentCostItem[]
   const result: AIAgentCostItem[] = [];
 
   for (const s of summaries) {
-    const breakdown = s.grand_total.ai_agent_breakdown || [];
+    const breakdown = s.grand_total.ai_model_breakdown || s.grand_total.ai_agent_breakdown || [];
     if (breakdown.length > 0) {
       for (const agent of breakdown) {
         result.push({
@@ -45,6 +45,17 @@ export function extractAIAgentCost(summaries: DailySummary[]): AIAgentCostItem[]
           cost: agent.cost,
         });
       }
+      continue;
+    }
+
+    // 兼容不同版本 WakaTime 的按模型/Agent 聚合成本对象。
+    const costs = s.grand_total.ai_model_costs || s.grand_total.ai_agent_costs || {};
+    for (const [agent, cost] of Object.entries(costs)) {
+      result.push({
+        date: s.date,
+        agent,
+        cost,
+      });
     }
   }
 
@@ -60,6 +71,9 @@ export function hasAIMetrics(summaries: DailySummary[]): boolean {
     (s) =>
       s.grand_total.ai_additions > 0 ||
       s.grand_total.ai_input_tokens > 0 ||
-      s.grand_total.ai_agent_breakdown?.length > 0
+      s.grand_total.ai_model_breakdown?.length > 0 ||
+      Object.keys(s.grand_total.ai_model_costs || {}).length > 0 ||
+      s.grand_total.ai_agent_breakdown?.length > 0 ||
+      Object.keys(s.grand_total.ai_agent_costs || {}).length > 0
   );
 }
