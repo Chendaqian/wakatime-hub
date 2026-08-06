@@ -22,6 +22,10 @@ const DIMENSIONS: { key: DimensionType; label: string }[] = [
 ];
 
 const PRESETS = [7, 14, 30];
+const DAY_PRESETS = [
+  { label: '今天', daysAgo: 0 },
+  { label: '昨天', daysAgo: 1 },
+];
 
 export function Controls({
   dateRange,
@@ -34,6 +38,11 @@ export function Controls({
 }: ControlsProps) {
   const today = dayjs().format('YYYY-MM-DD');
   const todayJs = dayjs();
+
+  const handleDayPreset = (daysAgo: number) => {
+    const date = todayJs.subtract(daysAgo, 'day').format('YYYY-MM-DD');
+    onDateRangeChange({ start: date, end: date });
+  };
 
   const handlePreset = (days: number) => {
     onDateRangeChange({
@@ -71,6 +80,20 @@ export function Controls({
 
   return (
     <div className={styles.controls}>
+      {DAY_PRESETS.map(({ label, daysAgo }) => {
+        const date = todayJs.subtract(daysAgo, 'day').format('YYYY-MM-DD');
+        const isActive = dateRange.start === date && dateRange.end === date;
+        return (
+          <button
+            key={label}
+            className={`${styles.presetBtn} ${isActive ? styles.activePreset : ''}`}
+            onClick={() => handleDayPreset(daysAgo)}
+          >
+            {label}
+          </button>
+        );
+      })}
+
       {PRESETS.map((days) => {
         const start = todayJs.subtract(days - 1, 'day').format('YYYY-MM-DD');
         const end = today;
