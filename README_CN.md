@@ -163,9 +163,9 @@ MIT
 ## Star History
 
 <a href="https://www.star-history.com/?repos=Chendaqian%2Fwakatime-hub&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Chendaqian%2Fwakatime-hub&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Chendaqian%2Fwakatime-hub&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Chendaqian%2Fwakatime-hub&type=date&legend=top-left" />
-  </picture>
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Chendaqian/wakatime-hub&type=date&theme=dark&legend=top-left&sealed_token=38qLY1ZCkkvxFkUDXIVX-3w38gsqFntJ-u6DBH5OGTaliD8FMBDkHbI-AisYJgmBZP2oJbVKW7JmJo1So7_rujZsV5sr5zq9L02EQT0fNum_NcLT0RTLx2_V8RzZ7qPEATZ9TKyXWj6w-fKxstN7F579ny0GC3GNMa4wjiDTsQfltHnwpOvXvv7TiW4R" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Chendaqian/wakatime-hub&type=date&legend=top-left&sealed_token=38qLY1ZCkkvxFkUDXIVX-3w38gsqFntJ-u6DBH5OGTaliD8FMBDkHbI-AisYJgmBZP2oJbVKW7JmJo1So7_rujZsV5sr5zq9L02EQT0fNum_NcLT0RTLx2_V8RzZ7qPEATZ9TKyXWj6w-fKxstN7F579ny0GC3GNMa4wjiDTsQfltHnwpOvXvv7TiW4R" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Chendaqian/wakatime-hub&type=date&legend=top-left&sealed_token=38qLY1ZCkkvxFkUDXIVX-3w38gsqFntJ-u6DBH5OGTaliD8FMBDkHbI-AisYJgmBZP2oJbVKW7JmJo1So7_rujZsV5sr5zq9L02EQT0fNum_NcLT0RTLx2_V8RzZ7qPEATZ9TKyXWj6w-fKxstN7F579ny0GC3GNMa4wjiDTsQfltHnwpOvXvv7TiW4R" />
+ </picture>
 </a>
