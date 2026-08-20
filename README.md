@@ -47,7 +47,7 @@ wakatime-hub/
 │   ├── vite.config.ts     # base: /wakatime-hub/dashboard/, port 3900
 │   └── package.json
 ├── .github/workflows/
-│   ├── schedule.yml       # Sync cron: UTC 13:00 (Beijing 21:00) daily
+│   ├── schedule.yml       # Sync cron: UTC 15:00 (Beijing 23:00) daily
 │   └── deploy-pages.yml   # Dashboard auto-build & deploy to GitHub Pages
 ├── README.md
 ├── README_CN.md
