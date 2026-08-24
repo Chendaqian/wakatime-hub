@@ -21,7 +21,12 @@ const DIMENSIONS: { key: DimensionType; label: string }[] = [
   { key: 'operating_systems', label: '系统' },
 ];
 
-const PRESETS = [3, 7, 14, 30];
+const PRESETS = [
+  { label: '前三天', days: 3, endDaysAgo: 1 },
+  { label: '近 7 天', days: 7, endDaysAgo: 0 },
+  { label: '近 14 天', days: 14, endDaysAgo: 0 },
+  { label: '近 30 天', days: 30, endDaysAgo: 0 },
+];
 const DAY_PRESETS = [
   { label: '今天', daysAgo: 0 },
   { label: '昨天', daysAgo: 1 },
@@ -44,10 +49,11 @@ export function Controls({
     onDateRangeChange({ start: date, end: date });
   };
 
-  const handlePreset = (days: number) => {
+  const handlePreset = (days: number, endDaysAgo: number) => {
+    const end = todayJs.subtract(endDaysAgo, 'day').format('YYYY-MM-DD');
     onDateRangeChange({
-      start: todayJs.subtract(days - 1, 'day').format('YYYY-MM-DD'),
-      end: today,
+      start: todayJs.subtract(endDaysAgo + days - 1, 'day').format('YYYY-MM-DD'),
+      end,
     });
   };
 
@@ -94,17 +100,17 @@ export function Controls({
         );
       })}
 
-      {PRESETS.map((days) => {
-        const start = todayJs.subtract(days - 1, 'day').format('YYYY-MM-DD');
-        const end = today;
+      {PRESETS.map(({ label, days, endDaysAgo }) => {
+        const start = todayJs.subtract(endDaysAgo + days - 1, 'day').format('YYYY-MM-DD');
+        const end = todayJs.subtract(endDaysAgo, 'day').format('YYYY-MM-DD');
         const isActive = dateRange.start === start && dateRange.end === end;
         return (
           <button
             key={days}
             className={`${styles.presetBtn} ${isActive ? styles.activePreset : ''}`}
-            onClick={() => handlePreset(days)}
+            onClick={() => handlePreset(days, endDaysAgo)}
           >
-            近 {days} 天
+            {label}
           </button>
         );
       })}
