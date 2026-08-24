@@ -21,7 +21,7 @@ const DIMENSIONS: { key: DimensionType; label: string }[] = [
   { key: 'operating_systems', label: '系统' },
 ];
 
-const PRESETS = [7, 14, 30];
+const PRESETS = [3, 7, 14, 30];
 const DAY_PRESETS = [
   { label: '今天', daysAgo: 0 },
   { label: '昨天', daysAgo: 1 },
