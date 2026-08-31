@@ -53,9 +53,8 @@ function getMessageContent(date, summary) {
   }
 }
 
-function getMessageTitle(date, summary) {
-  const totalTime = summary[0]?.grand_total?.text
-  return totalTime ? `${date} · ${totalTime}` : `${date} update successfully!`
+function getMessageTitle(summary) {
+  return `\n${summary[0]?.grand_total?.text || '0 secs'}`
 }
 
 function getMySummary(date) {
@@ -184,12 +183,8 @@ async function main() {
     return
   }
 
-  // 北京时间 0:00 ~ 2:59 执行时，按前一天 23:30 的日报处理
-  const now = dayjs().utcOffset(8)
-  const reportTime = now.hour() < 3
-    ? now.subtract(1, 'day').hour(23).minute(30)
-    : now
-  const today = reportTime.format('YYYY-MM-DD')
+  // 默认今天
+  const today = dayjs().utcOffset(8).format('YYYY-MM-DD')
   try {
     await doSync(today)
   } catch (err) {
@@ -208,7 +203,7 @@ async function doSync(date) {
     await updateGist(date, mySummary.data)
     console.log(`[${date}] done`)
     await sendMessageToWechat(
-      getMessageTitle(date, mySummary.data),
+      getMessageTitle(mySummary.data),
       getMessageContent(date, mySummary.data)
     )
   } catch (error) {
