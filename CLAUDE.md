@@ -84,7 +84,7 @@ wakatime-hub/
 │   └── package.json
 ├── data/                       # 开发参考数据
 ├── .github/workflows/
-│   ├── schedule.yml            # sync 定时：UTC 15:00 (北京 23:00)
+│   ├── schedule.yml            # sync 定时：UTC 13:30 (北京 21:30)
 │   └── deploy-pages.yml        # dashboard 部署到 GitHub Pages
 ├── README.md
 ├── README_CN.md

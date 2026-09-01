@@ -47,7 +47,7 @@ wakatime-hub/
 │   ├── vite.config.ts     # base: /wakatime-hub/dashboard/，端口 3900
 │   └── package.json
 ├── .github/workflows/
-│   ├── schedule.yml       # sync 定时：UTC 15:00（北京时间 23:00）每日
+│   ├── schedule.yml       # sync 定时：UTC 13:30（北京时间 21:30）每日
 │   └── deploy-pages.yml   # dashboard 自动构建部署到 GitHub Pages
 ├── README.md
 ├── README_CN.md
