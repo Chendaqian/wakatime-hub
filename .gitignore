@@ -86,3 +86,5 @@ $RECYCLE.BIN/
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
 build/
+/.playwright-mcp/*.log
+/.playwright-mcp
