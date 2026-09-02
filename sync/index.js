@@ -183,8 +183,10 @@ async function main() {
     return
   }
 
-  // 默认今天
-  const today = dayjs().utcOffset(8).format('YYYY-MM-DD')
+  // 定时为北京时间 21:30；早于该时刻执行时按前一天的日报处理
+  const now = dayjs().utcOffset(8)
+  const scheduled = now.hour(21).minute(30).second(0).millisecond(0)
+  const today = (now.isBefore(scheduled) ? now.subtract(1, 'day') : now).format('YYYY-MM-DD')
   try {
     await doSync(today)
   } catch (err) {
