@@ -53,8 +53,9 @@ function getMessageContent(date, summary) {
   }
 }
 
-function getMessageTitle(summary) {
-  return `\n${summary[0]?.grand_total?.text || '0 secs'}`
+function getMessageTitle(date, summary) {
+  const totalTime = summary[0]?.grand_total?.text
+  return totalTime ? `${date} · ${totalTime}` : `${date} update successfully!`
 }
 
 function getMySummary(date) {
@@ -205,7 +206,7 @@ async function doSync(date) {
     await updateGist(date, mySummary.data)
     console.log(`[${date}] done`)
     await sendMessageToWechat(
-      getMessageTitle(mySummary.data),
+      getMessageTitle(date, mySummary.data),
       getMessageContent(date, mySummary.data)
     )
   } catch (error) {
