@@ -6,6 +6,7 @@ interface GistDataContextValue {
   summaries: DailySummary[];
   status: AppStatus;
   error: string | null;
+  tokenNotice: string | null;
   yearGistMap: Record<string, string>;
   loadedYears: Set<string>;
   activeYear: string | null;
@@ -16,6 +17,7 @@ interface GistDataContextValue {
   openConfig: () => void;
   closeConfig: () => void;
   saveConfig: (json: string, token?: string) => void;
+  dismissTokenNotice: () => void;
 }
 
 const GistDataContext = createContext<GistDataContextValue | null>(null);

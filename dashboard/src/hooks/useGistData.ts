@@ -1,6 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
 import type { DailySummary, AppStatus } from '@/types';
-import { fetchGistFiles, fetchSummariesFromGistFiles } from '@/services/GistService';
+import {
+  fetchGistFiles,
+  fetchSummariesFromGistFiles,
+  isBadCredentials,
+  gistErrorMessage,
+} from '@/services/GistService';
 import type { GistMonthFile } from '@/services/GistService';
 
 const CACHE_KEY = 'wakatime_gist_cache';
@@ -57,6 +62,7 @@ export interface UseGistDataReturn {
   summaries: DailySummary[];
   status: AppStatus;
   error: string | null;
+  tokenNotice: string | null;
   yearGistMap: Record<string, string>;     // 年份 → Gist ID
   loadedYears: Set<string>;
   activeYear: string | null;
@@ -68,6 +74,7 @@ export interface UseGistDataReturn {
   openConfig: () => void;
   closeConfig: () => void;
   saveConfig: (json: string, token?: string) => void;
+  dismissTokenNotice: () => void;
 }
 
 export function useGistData(): UseGistDataReturn {
@@ -87,11 +94,15 @@ export function useGistData(): UseGistDataReturn {
     Object.keys(yearGistMap).length > 0 ? 'loading' : 'config'
   );
   const [error, setError] = useState<string | null>(null);
+  const [tokenNotice, setTokenNotice] = useState<string | null>(null);
   const [activeYear, setActiveYearState] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
 
   const openConfig = useCallback(() => setShowConfig(true), []);
   const closeConfig = useCallback(() => setShowConfig(false), []);
+
+  /** 关闭「Token 已失效」提示 */
+  const dismissTokenNotice = useCallback(() => setTokenNotice(null), []);
 
   const saveConfig = useCallback((json: string, token?: string) => {
     const map = parseGistIds(json);
@@ -108,6 +119,7 @@ export function useGistData(): UseGistDataReturn {
     setSummaries([]);
     setStatus('loading');
     setError(null);
+    setTokenNotice(null);
     setActiveYearState(null);
     setShowConfig(false);
   }, []);
@@ -126,6 +138,7 @@ export function useGistData(): UseGistDataReturn {
     setSummaries([]);
     setStatus(Object.keys(defaultMap).length > 0 ? 'loading' : 'config');
     setError(null);
+    setTokenNotice(null);
     setActiveYearState(null);
   }, [defaultMap]);
 
@@ -140,7 +153,18 @@ export function useGistData(): UseGistDataReturn {
     let files: GistMonthFile[] = [];
     try {
       files = await fetchGistFiles(gistId, token);
-    } catch { /* skip failed Gist */ }
+    } catch (err) {
+      // Token 失效（401）时清除并匿名重试：公开 Gist 本就不需要认证
+      if (token && isBadCredentials(err)) {
+        localStorage.removeItem(GIST_TOKEN_KEY);
+        setTokenNotice(
+          'GitHub Token 已失效，已自动切换为匿名访问（60 次/小时）。填写新 Token 可提升至 5000 次/小时。'
+        );
+        files = await fetchGistFiles(gistId);
+      } else {
+        throw new Error(gistErrorMessage(err, gistId));
+      }
+    }
 
     const newSummaries = await fetchSummariesFromGistFiles(files, token);
     if (newSummaries.length > 0) {
@@ -182,6 +206,7 @@ export function useGistData(): UseGistDataReturn {
     summaries,
     status,
     error,
+    tokenNotice,
     yearGistMap,
     loadedYears,
     activeYear,
@@ -193,6 +218,7 @@ export function useGistData(): UseGistDataReturn {
     openConfig,
     closeConfig,
     saveConfig,
+    dismissTokenNotice,
   };
 }
 

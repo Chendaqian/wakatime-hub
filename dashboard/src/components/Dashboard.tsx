@@ -31,7 +31,7 @@ import styles from './Dashboard.module.css';
 
 
 export function Dashboard() {
-  const { summaries, status, error, yearGistMap, activeYear, setActiveYear, loadData, openConfig } = useGistData();
+  const { summaries, status, error, tokenNotice, dismissTokenNotice, yearGistMap, activeYear, setActiveYear, loadData, openConfig } = useGistData();
 
   const today = dayjs().format('YYYY-MM-DD');
   const [dateRange, setDateRange] = useState({
@@ -234,6 +234,21 @@ export function Dashboard() {
       </header>
 
       <div className={styles.content}>
+        {tokenNotice && (
+          <div className={styles.tokenWarn} role="status">
+            <span className={styles.tokenWarnText}>{tokenNotice}</span>
+            <button className={styles.configLinkBtn} onClick={handleReset}>
+              填写 Token
+            </button>
+            <button
+              className={styles.tokenWarnClose}
+              onClick={dismissTokenNotice}
+              aria-label="关闭提示"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <OverviewCards
           totalSeconds={overviewStats.totalSeconds}
           projectCount={overviewStats.projectCount}

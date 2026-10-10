@@ -10,6 +10,23 @@ function extractMonthFromFilename(filename: string): string | null {
   return match ? match[1] : null;
 }
 
+/** 是否为 GitHub 凭证错误（HTTP 401 Bad credentials） */
+export function isBadCredentials(err: unknown): boolean {
+  return axios.isAxiosError(err) && err.response?.status === 401;
+}
+
+/** 把 Gist 请求异常转成可展示的中文提示 */
+export function gistErrorMessage(err: unknown, gistId: string): string {
+  if (axios.isAxiosError(err)) {
+    const status = err.response?.status;
+    if (status === 401) return 'GitHub Token 无效或已过期，请在配置页清空或更新';
+    if (status === 403) return 'GitHub API 频率限制或权限不足，可在配置页填写 Token 提升额度';
+    if (status === 404) return `Gist ${gistId} 不存在或已删除，请检查配置`;
+    if (status) return `GitHub API 请求失败（HTTP ${status}）`;
+  }
+  return err instanceof Error ? err.message : '加载 Gist 数据失败';
+}
+
 export interface GistMonthFile {
   filename: string;
   rawUrl: string;
